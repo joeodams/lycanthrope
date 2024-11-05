@@ -1,0 +1,45 @@
+{
+  "Files": [
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\lycanthrope.bundle.scp.css",
+      "PackagePath": "staticwebassets\\lycanthrope.bundle.scp.css"
+    },
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css"
+    },
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\lycanthrope.webp",
+      "PackagePath": "staticwebassets\\lycanthrope.webp"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.lycanthrope.props",
+      "PackagePath": "build\\lycanthrope.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.lycanthrope.props",
+      "PackagePath": "buildMultiTargeting\\lycanthrope.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.lycanthrope.props",
+      "PackagePath": "buildTransitive\\lycanthrope.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.lycanthrope.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

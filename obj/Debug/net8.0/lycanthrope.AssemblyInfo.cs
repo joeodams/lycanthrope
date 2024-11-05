@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("lycanthrope")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a146fb5bb312904346e4187a516be5c20ccf698")]
 [assembly: System.Reflection.AssemblyProductAttribute("lycanthrope")]
 [assembly: System.Reflection.AssemblyTitleAttribute("lycanthrope")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

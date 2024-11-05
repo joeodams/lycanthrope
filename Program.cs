@@ -1,10 +1,17 @@
 using lycanthrope.Components;
+using lycanthrope.Interfaces;
+using lycanthrope.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
+// Add SignalR
+builder.Services.AddSignalR();
+
+// Add the lobby management service
+builder.Services.AddSingleton<ILobbyService, LobbyService>();
 
 var app = builder.Build();
 
@@ -21,7 +28,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+app.MapHub<LobbyHub>("/lobbyhub");
 
 app.Run();

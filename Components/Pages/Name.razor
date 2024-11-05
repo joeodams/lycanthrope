@@ -1,0 +1,50 @@
+@page "/"
+
+@rendermode InteractiveServer
+@using System.Diagnostics
+@using lycanthrope.Interfaces
+@using lycanthrope.Models
+@inject ILoggerFactory LoggerFactory
+
+<div class="fullscreen-background">
+    <div class="input-container">
+        <EditForm Model="@player" OnValidSubmit="HandleValidSubmit" style="width: 100%; height: 10%;">
+            <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" />
+        </EditForm>
+    </div>
+</div>
+
+
+@code {
+    [SupplyParameterFromQuery]
+    public string LobbyId { get; set; }
+    private InputText nameInput;
+
+    private Player player = new Player();
+
+    [Inject]
+    private NavigationManager Navigation { get; set; }
+
+    private void HandleValidSubmit()
+    {
+        if (!string.IsNullOrWhiteSpace(LobbyId))
+        {
+            //validate lobby ID
+            Navigation.NavigateTo($"/lobby/{LobbyId}?playerName={player.Name}&playerId={player.Id}");
+        }
+        else
+        {
+            Console.WriteLine($"name created: {player.Name}");
+            var newLobbyId = Guid.NewGuid();
+            Navigation.NavigateTo($"/lobby/{newLobbyId}?playerName={player.Name}&playerId={player.Id}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (nameInput?.Element != null)
+        {
+            await nameInput.Element.Value.FocusAsync();
+        }
+    }
+}
