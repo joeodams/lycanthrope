@@ -44,3 +44,9 @@ C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\Microsoft.Ext
 C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
 C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\obj\Debug\net8.0\lycanthrope.csproj.AssemblyReference.cache
 C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\obj\Debug\net8.0\lycanthr.24967D4F.Up2Date
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\MessagePack.dll
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\MessagePack.Annotations.dll
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\Microsoft.AspNetCore.SignalR.StackExchangeRedis.dll
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\Microsoft.NET.StringTools.dll
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\Pipelines.Sockets.Unofficial.dll
+C:\Users\joeod\OneDrive\Documents\dev\lycanthrope\bin\Debug\net8.0\StackExchange.Redis.dll

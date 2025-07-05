@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "wiA9a4TOQM+LbWKbyifVLbTvH+kb0kVsbK0rNM/TxBc=",
+  "Hash": "U0SXVxPkudiOG4Ih/Z1ATzDb3XbRhK/MPDeA2jFsm7c=",
   "Source": "lycanthrope",
   "BasePath": "_content/lycanthrope",
   "Mode": "Default",
@@ -10,17 +10,17 @@
     {
       "Name": "lycanthrope\\wwwroot",
       "Source": "lycanthrope",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "Pattern": "**"
     }
   ],
   "Assets": [
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\lycanthrope.styles.css",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\lycanthrope.styles.css",
       "SourceId": "lycanthrope",
       "SourceType": "Computed",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "lycanthrope.styles.css",
       "AssetKind": "All",
@@ -33,13 +33,13 @@
       "AssetTraitValue": "ApplicationBundle",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\lycanthrope.styles.css"
+      "OriginalItemSpec": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\bundle\\lycanthrope.styles.css"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\lycanthrope.bundle.scp.css",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\lycanthrope.bundle.scp.css",
       "SourceId": "lycanthrope",
       "SourceType": "Computed",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "lycanthrope.bundle.scp.css",
       "AssetKind": "All",
@@ -52,13 +52,13 @@
       "AssetTraitValue": "ProjectBundle",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\lycanthrope.bundle.scp.css"
+      "OriginalItemSpec": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\lycanthrope.bundle.scp.css"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\app.css",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\app.css",
       "SourceId": "lycanthrope",
       "SourceType": "Discovered",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "app.css",
       "AssetKind": "All",
@@ -74,10 +74,10 @@
       "OriginalItemSpec": "wwwroot\\app.css"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css",
       "SourceId": "lycanthrope",
       "SourceType": "Discovered",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "bootstrap/bootstrap.min.css",
       "AssetKind": "All",
@@ -93,10 +93,10 @@
       "OriginalItemSpec": "wwwroot\\bootstrap\\bootstrap.min.css"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\bootstrap\\bootstrap.min.css.map",
       "SourceId": "lycanthrope",
       "SourceType": "Discovered",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "bootstrap/bootstrap.min.css.map",
       "AssetKind": "All",
@@ -112,10 +112,10 @@
       "OriginalItemSpec": "wwwroot\\bootstrap\\bootstrap.min.css.map"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\favicon.png",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\favicon.png",
       "SourceId": "lycanthrope",
       "SourceType": "Discovered",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "favicon.png",
       "AssetKind": "All",
@@ -131,10 +131,10 @@
       "OriginalItemSpec": "wwwroot\\favicon.png"
     },
     {
-      "Identity": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\lycanthrope.webp",
+      "Identity": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\lycanthrope.webp",
       "SourceId": "lycanthrope",
       "SourceType": "Discovered",
-      "ContentRoot": "c:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\joeod\\OneDrive\\Documents\\dev\\lycanthrope\\wwwroot\\",
       "BasePath": "_content/lycanthrope",
       "RelativePath": "lycanthrope.webp",
       "AssetKind": "All",

@@ -1,6 +1,7 @@
 using lycanthrope.Components;
 using lycanthrope.Interfaces;
 using lycanthrope.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +12,15 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddSignalR();
 
 // Add the lobby management service
-builder.Services.AddSingleton<ILobbyService, LobbyService>();
+builder.Services.AddScoped<ILobbyService, LobbyService>();
 
+var multiplexer = ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true");
+var server = multiplexer.GetServer("localhost:6379");
+server.FlushAllDatabases();
+builder.Services.AddScoped<IDatabase>(cfg =>
+{
+    return multiplexer.GetDatabase();
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

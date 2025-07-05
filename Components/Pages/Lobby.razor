@@ -1,5 +1,6 @@
 @page "/lobby/{id:Guid}"
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.Extensions.Logging
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
 @inject ILobbyService LobbyService;
@@ -10,12 +11,23 @@
 <h1>Welcome to @Id</h1>
 
 <div class="lobby-container">
+
     @if (lobby != null)
     {
+
+        Console.WriteLine("Lobby is not null.");
+
+        Console.WriteLine($"Lobby has {lobby.Players.Count()}.");
+
+
         @foreach (var player in lobby.Players)
         {
             <div>Player: @player.Name</div>
         }
+    }
+    else
+    {
+        Console.WriteLine("Lobby is null.");
     }
 
     <button @onclick="CopyShareLinkAsync">Share Lobby Link</button>
@@ -41,7 +53,6 @@
         // Fetch the lobby using the service
         var lobbyId = Guid.Parse(Id);
         var player = new Player(playerId, playerName);
-        lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId);
 
         hubConnection = new HubConnectionBuilder()
         .WithUrl(NavigationManager.ToAbsoluteUri($"/lobbyhub?lobbyId={lobbyId}"))
@@ -50,12 +61,14 @@
         await hubConnection.StartAsync();
 
         @* await hubConnection.SendAsync("LobbyInitialised", lobbyId.ToString()); *@
+        lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId);
+        lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, player);
 
         // Handle player join event
         hubConnection.On<string>("ReceivePlayerJoined", async (playerName) =>
         {
             // Add player to the lobby
-            await LobbyService.AddPlayerToLobbyAsync(lobbyId, player);
+            @* lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, player); *@
             await InvokeAsync(StateHasChanged);
         });
 
@@ -63,7 +76,7 @@
         hubConnection.On<string>("ReceivePlayerLeft", async (playerName) =>
         {
             // Add player to the lobby
-            await LobbyService.RemovePlayerFromLobbyAsync(lobbyId, playerId);
+            @* await LobbyService.RemovePlayerFromLobbyAsync(lobbyId, playerId); *@
             await InvokeAsync(StateHasChanged);
         });
 
