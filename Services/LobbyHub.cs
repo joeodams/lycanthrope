@@ -20,6 +20,12 @@ namespace lycanthrope.Services
             await Clients.Group(lobbyId).SendAsync("ReceivePlayerJoined", playerName);
         }
 
+        // Broadcast when a player leaves
+        public async Task PlayerLeft(string lobbyId, string playerName)
+        {
+            await Clients.Group(lobbyId).SendAsync("ReceivePlayerJoined", playerName);
+        }
+
         // On connect logic
         public override async Task OnConnectedAsync()
         {

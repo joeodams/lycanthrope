@@ -1,88 +1,76 @@
 @page "/lobby/{id:Guid}"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR.Client
-@using Microsoft.Extensions.Logging
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
-@inject ILobbyService LobbyService;
+
+@inject ILobbyService LobbyService
 @inject IJSRuntime JSRuntime;
 @inject NavigationManager NavigationManager;
-@rendermode InteractiveServer
+@inject ILogger<Lobby> Log
 
-<h1>Welcome to @Id</h1>
+<h1>Lobby @Id</h1>
 
 <div class="lobby-container">
-
-    @if (lobby != null)
+    @if (lobby is null)
     {
-
-        Console.WriteLine("Lobby is not null.");
-
-        Console.WriteLine($"Lobby has {lobby.Players.Count()}.");
-
-
-        @foreach (var player in lobby.Players)
-        {
-            <div>Player: @player.Name</div>
-        }
+        <p>Loading…</p>
     }
     else
     {
-        Console.WriteLine("Lobby is null.");
+        @foreach (var p in lobby.Players)
+        {
+            <div>
+                <div>@p.Name</div>
+            </div>
+        }
     }
 
-    <button @onclick="CopyShareLinkAsync">Share Lobby Link</button>
+    <button @onclick="CopyShareLinkAsync">Share lobby link</button>
     <button @onclick="LeaveAsync">Leave</button>
-
 </div>
 
-@code {
-    [Parameter]
-    public string Id { get; set; }
-
-    [SupplyParameterFromQuery]
-    private string playerName { get; set; }
-
-    [SupplyParameterFromQuery]
-    private Guid playerId { get; set; }
+@code
+{
+    [Parameter] public string Id { get; set; } // the lobbyId in the url
+    [SupplyParameterFromQuery] public string PlayerName { get; set; }
+    [SupplyParameterFromQuery] public Guid PlayerId { get; set; }
 
     private lycanthrope.Models.Lobby lobby;
-    private HubConnection hubConnection;
+    private HubConnection hub;
 
     protected override async Task OnInitializedAsync()
     {
-        // Fetch the lobby using the service
         var lobbyId = Guid.Parse(Id);
-        var player = new Player(playerId, playerName);
+        var me = new Player(PlayerId, PlayerName);
 
-        hubConnection = new HubConnectionBuilder()
+        // --- SignalR --------------------------------------------------------
+        hub = new HubConnectionBuilder()
         .WithUrl(NavigationManager.ToAbsoluteUri($"/lobbyhub?lobbyId={lobbyId}"))
+        .WithAutomaticReconnect()
         .Build();
 
-        await hubConnection.StartAsync();
-
-        @* await hubConnection.SendAsync("LobbyInitialised", lobbyId.ToString()); *@
-        lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId);
-        lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, player);
-
-        // Handle player join event
-        hubConnection.On<string>("ReceivePlayerJoined", async (playerName) =>
+        // 1. register callbacks BEFORE you StartAsync()
+        hub.On<string>("ReceivePlayerJoined", async (name) =>
         {
-            // Add player to the lobby
-            @* lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, player); *@
+            lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId); // pull fresh state
             await InvokeAsync(StateHasChanged);
         });
 
-        // Handle player leave event
-        hubConnection.On<string>("ReceivePlayerLeft", async (playerName) =>
+        hub.On<string>("ReceivePlayerLeft", async (name) =>
         {
-            // Add player to the lobby
-            @* await LobbyService.RemovePlayerFromLobbyAsync(lobbyId, playerId); *@
+            lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId);
             await InvokeAsync(StateHasChanged);
         });
 
-        // Notify the server that a new player has joined
-        await hubConnection.SendAsync("PlayerJoined", lobbyId.ToString(), playerName);
+        await hub.StartAsync();
+        //---------------------------------------------------------------------
 
+        // 2. add yourself to the lobby (server side)
+        lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, me);
+
+        // 3. notify other clients
+        await hub.SendAsync("PlayerJoined", lobbyId.ToString(), me.Name);
     }
 
     private async Task CopyShareLinkAsync()
@@ -93,7 +81,13 @@
 
     private async Task LeaveAsync()
     {
-        // Notify the server that a new player has joined
-        await hubConnection.SendAsync("PlayerLeft", Id, playerName);
+        await hub.SendAsync("PlayerLeft", Id, PlayerName);
+        await hub.StopAsync();
+        NavigationManager.NavigateTo("/");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) await hub.DisposeAsync();
     }
 }
