@@ -12,7 +12,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddSignalR();
 
 // Add the lobby management service
-builder.Services.AddScoped<ILobbyService, LobbyService>();
+builder.Services.AddScoped<IGameEngineService, GameEngineService>();
 
 var multiplexer = ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true");
 var server = multiplexer.GetServer("localhost:6379");
@@ -20,6 +20,10 @@ server.FlushAllDatabases();
 builder.Services.AddScoped<IDatabase>(cfg =>
 {
     return multiplexer.GetDatabase();
+});
+builder.Services.AddScoped<ISubscriber>(cfg =>
+{
+    return multiplexer.GetSubscriber();
 });
 var app = builder.Build();
 

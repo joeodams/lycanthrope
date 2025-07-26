@@ -7,12 +7,7 @@ namespace lycanthrope.Services
     // [Authorize]
     public class LobbyHub : Hub
     {
-        private readonly ILobbyService lobbyService;
-
-        public LobbyHub(ILobbyService lobbyService)
-        {
-            this.lobbyService = lobbyService;
-        }
+        public LobbyHub() { }
 
         // Broadcast when a player joins
         public async Task PlayerJoined(string lobbyId, string playerName)
@@ -23,7 +18,13 @@ namespace lycanthrope.Services
         // Broadcast when a player leaves
         public async Task PlayerLeft(string lobbyId, string playerName)
         {
-            await Clients.Group(lobbyId).SendAsync("ReceivePlayerJoined", playerName);
+            await Clients.Group(lobbyId).SendAsync("ReceivePlayerLeft", playerName);
+        }
+
+        // Broadcast when a player toggles ready
+        public async Task PlayerReadyToggle(string lobbyId, string playerName)
+        {
+            await Clients.Group(lobbyId).SendAsync("ReceivePlayerReadyToggle", playerName);
         }
 
         // On connect logic

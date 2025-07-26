@@ -11,5 +11,7 @@ namespace lycanthrope.Interfaces
         Task<Lobby> GetOrCreateLobbyByIdAsync(Guid lobbyId);
 
         Task<Lobby> GetLobbyByIdAsync(Guid lobbyId);
+
+        Task TogglePlayerReadyAsync(Guid lobbyId, Guid playerId);
     }
 }

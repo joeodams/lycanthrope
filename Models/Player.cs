@@ -13,4 +13,10 @@ public class Player
     public Guid Id { get; set; }
 
     public string Name { get; set; }
+
+    public bool Ready { get; set; }
+
+    public Role Role { get; set; }
+
+    public bool Alive { get; set; }
 }

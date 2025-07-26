@@ -4,7 +4,7 @@
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
 
-@inject ILobbyService LobbyService
+@inject IGameEngineService LobbyService
 @inject IJSRuntime JSRuntime;
 @inject NavigationManager NavigationManager;
 @inject ILogger<Lobby> Log
@@ -21,13 +21,41 @@
         @foreach (var p in lobby.Players)
         {
             <div>
-                <div>@p.Name</div>
+                <table>
+                    <tr>
+                        <td>
+                            <div>
+                                <p>@p.Name</p>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                @if (p.Ready)
+                                {
+                                    <p>Ready</p>
+                                }
+                                else
+                                {
+                                    <p>not ready</p>
+                                }
+                            </div>
+                        </td>
+                        @if (p.Id == PlayerId)
+                        {
+                            <td>
+                                <button @onclick="TogglePlayerReadyAsync">Toggle ready</button>
+                            </td>
+                        }
+                    </tr>
+                </table>
             </div>
         }
     }
 
     <button @onclick="CopyShareLinkAsync">Share lobby link</button>
     <button @onclick="LeaveAsync">Leave</button>
+    <button @onclick="StartGameAsync">Start game</button>
+
 </div>
 
 @code
@@ -53,14 +81,31 @@
         // 1. register callbacks BEFORE you StartAsync()
         hub.On<string>("ReceivePlayerJoined", async (name) =>
         {
-            lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId); // pull fresh state
+            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId); // pull fresh state
             await InvokeAsync(StateHasChanged);
         });
 
         hub.On<string>("ReceivePlayerLeft", async (name) =>
         {
-            lobby = await LobbyService.GetOrCreateLobbyByIdAsync(lobbyId);
+            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
             await InvokeAsync(StateHasChanged);
+        });
+
+        hub.On<string>("ReceivePlayerReadyToggle", async (name) =>
+        {
+            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        hub.On<string>("ReceiveGameStarted", async (name) =>
+        {
+            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        hub.On("ReceiveGameStarted", async () =>
+        {
+            await InvokeAsync(() => RouteToGamePage());
         });
 
         await hub.StartAsync();
@@ -79,11 +124,30 @@
         await JSRuntime.InvokeVoidAsync("copyToClipboard", url);
     }
 
+    private async Task TogglePlayerReadyAsync()
+    {
+
+        await LobbyService.TogglePlayerReadyAsync(Guid.Parse(Id), PlayerId);
+        await hub.SendAsync("PlayerReadyToggle", Id, PlayerName);
+
+    }
+
+    private void RouteToGamePage()
+    {
+        NavigationManager.NavigateTo($"/game/{Id}" +
+        $"?playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}");
+    }
+
     private async Task LeaveAsync()
     {
         await hub.SendAsync("PlayerLeft", Id, PlayerName);
-        await hub.StopAsync();
         NavigationManager.NavigateTo("/");
+    }
+
+    private async Task StartGameAsync()
+    {
+        await LobbyService.StartGameAsync(Guid.Parse(Id));
+        await hub.SendAsync("GameStarted", Id, PlayerName);
     }
 
     public async ValueTask DisposeAsync()
