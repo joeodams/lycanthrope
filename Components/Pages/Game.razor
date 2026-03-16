@@ -219,18 +219,9 @@
                             }
                         </div>
 
-                        @if (!IsChatOpen)
-                        {
-                            <p class="game-chat-note">Your voice only falls on the blackness of the night.</p>
-                        }
-                        else if (!CanSpeakInChat)
-                        {
-                            <p class="game-chat-note">Your frail, ghostly voice is inaudible to the living.</p>
-                        }
-
                         <form class="game-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
                             <input class="game-chat-input" @bind="chatMessage" @bind:event="oninput" maxlength="280"
-                                   placeholder="Accuse, warn, or beg for mercy..." disabled="@(!CanSendChat)" />
+                                   placeholder="@ChatPlaceholder" disabled="@(!CanSendChat)" />
                             <button class="game-button" type="submit"
                                     disabled="@(!CanSendChat || string.IsNullOrWhiteSpace(chatMessage))">
                                 Send
@@ -337,6 +328,13 @@
         string.IsNullOrWhiteSpace(Lobby.LatestEvent)
             ? "The village listens for the next sign."
             : Lobby.LatestEvent;
+
+    private string ChatPlaceholder =>
+        !IsChatOpen
+            ? "Your voice only falls on the blackness of the night."
+            : !CanSpeakInChat
+                ? "Your frail, ghostly voice is inaudible to the living."
+                : "Accuse, warn, or beg for mercy...";
 
     private string RoleDescription =>
         CurrentPlayer.Role switch
