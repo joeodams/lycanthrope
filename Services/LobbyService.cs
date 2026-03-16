@@ -1,3 +1,5 @@
+﻿#nullable enable
+
 using lycanthrope.Interfaces;
 using lycanthrope.Models;
 using StackExchange.Redis;
@@ -140,7 +142,17 @@ public class GameEngineService : IGameEngineService
         if (all.Length == 0)
             return;
 
-        var lynchedId = all.GroupBy(x => x.Value).OrderByDescending(g => g.Count()).First().Key;
+        var lynchedId = all
+            .GroupBy(x => x.Value)
+            .OrderByDescending(g => g.Count())
+            .First()
+            .Key.ToString();
+
+        if (string.IsNullOrWhiteSpace(lynchedId))
+        {
+            return;
+        }
+
         string pKey = PKey(Guid.Parse(lynchedId));
         await _db.HashSetAsync(pKey, "Alive", "0");
         await _pub.PublishAsync(Evt(lobbyId), $"Lynched:{lynchedId}");
@@ -220,13 +232,17 @@ public class GameEngineService : IGameEngineService
     private async Task<Meta> LoadLobbyMeta(Guid id)
     {
         var h = await _db.HashGetAllAsync(LMeta(id));
-        return h.Length == 0
-            ? new Meta(Phase.Setup, 0, null)
-            : new Meta(
-                Enum.Parse<Phase>(h.First(e => e.Name == "Phase").Value),
-                int.Parse(h.First(e => e.Name == "Day").Value),
-                h.First(e => e.Name == "Winner").Value!
-            );
+        if (h.Length == 0)
+        {
+            return new Meta(Phase.Setup, 0, null);
+        }
+
+        var winner = h.First(e => e.Name == "Winner").Value.ToString();
+        return new Meta(
+            Enum.Parse<Phase>(GetRequiredHashValue(h, "Phase")),
+            int.Parse(GetRequiredHashValue(h, "Day")),
+            string.IsNullOrWhiteSpace(winner) ? null : winner
+        );
     }
 
     /* ───────────────────────── key helpers ────────────────────────────── */
@@ -241,7 +257,7 @@ public class GameEngineService : IGameEngineService
 
     static string Votes(Guid id) => $"lobby:{id}:votes";
 
-    static string Evt(Guid id) => $"lobby:{id}:events";
+    static RedisChannel Evt(Guid id) => RedisChannel.Literal($"lobby:{id}:events");
 
     /* ───────────────────────── mapping ────────────────────────────────── */
 
@@ -249,17 +265,25 @@ public class GameEngineService : IGameEngineService
     {
         bool alive = h.Single(e => e.Name == "Alive").Value.ToBool();
         bool ready = h.Single(e => e.Name == "Ready").Value.ToBool();
-        var role = Enum.Parse<Role>(h.Single(e => e.Name == "Role").Value);
+        var role = Enum.Parse<Role>(GetRequiredHashValue(h, "Role"));
 
         return new Player(
-            Guid.Parse(h.Single(e => e.Name == "Id").Value),
-            h.Single(e => e.Name == "Name").Value
+            Guid.Parse(GetRequiredHashValue(h, "Id")),
+            GetRequiredHashValue(h, "Name")
         )
         {
             Alive = alive,
             Ready = ready,
             Role = role,
         };
+    }
+
+    private static string GetRequiredHashValue(HashEntry[] hash, RedisValue name)
+    {
+        var value = hash.Single(entry => entry.Name == name).Value.ToString();
+        return !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new InvalidOperationException($"Expected Redis field '{name}' to have a value.");
     }
 
     /* ───────────────────────── JSON util ──────────────────────────────── */

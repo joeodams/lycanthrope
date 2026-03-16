@@ -1,3 +1,5 @@
+﻿#nullable enable
+
 namespace lycanthrope.Models
 {
     public class Lobby(Guid id)
@@ -10,6 +12,6 @@ namespace lycanthrope.Models
 
         public Phase Phase { get; set; }
 
-        public string Winner { get; set; }
+        public string? Winner { get; set; }
     }
 }
