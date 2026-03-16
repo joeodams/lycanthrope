@@ -61,11 +61,6 @@
                 <p class="game-message game-banner">@connectionMessage</p>
             }
 
-            @if (!string.IsNullOrWhiteSpace(feedbackMessage))
-            {
-                <p class="game-message game-banner">@feedbackMessage</p>
-            }
-
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 <p class="game-message game-message-error game-banner">@errorMessage</p>
@@ -278,7 +273,6 @@
     private GameView gameView;
     private HubConnection hub;
     private string connectionMessage = string.Empty;
-    private string feedbackMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string initializationError = string.Empty;
     private string chatMessage = string.Empty;
@@ -469,7 +463,6 @@
             return;
         }
 
-        feedbackMessage = string.Empty;
         errorMessage = string.Empty;
         await InvokeAsync(StateHasChanged);
     }
@@ -485,22 +478,15 @@
             () => GameEngineService.SubmitNightActionAsync(
                 Id,
                 new NightAction(PlayerId, AvailableNightAction.Value, targetId)
-            ),
-            $"{GetNightActionVerb()} submitted for {GetPlayerName(targetId)}."
+            )
         );
     }
 
     private Task SubmitVoteAsync(Guid targetId) =>
-        RunGameActionAsync(
-            () => GameEngineService.SubmitVoteAsync(Id, PlayerId, targetId),
-            $"Vote submitted for {GetPlayerName(targetId)}."
-        );
+        RunGameActionAsync(() => GameEngineService.SubmitVoteAsync(Id, PlayerId, targetId));
 
     private Task AdvancePhaseAsync() =>
-        RunGameActionAsync(
-            () => GameEngineService.AdvancePhaseAsync(Id, PlayerId),
-            "Phase advanced."
-        );
+        RunGameActionAsync(() => GameEngineService.AdvancePhaseAsync(Id, PlayerId));
 
     private async Task SendChatMessageAsync()
     {
@@ -554,7 +540,7 @@
         }
     }
 
-    private async Task RunGameActionAsync(Func<Task> action, string successMessage = "")
+    private async Task RunGameActionAsync(Func<Task> action)
     {
         if (isBusy)
         {
@@ -567,7 +553,6 @@
         try
         {
             await action();
-            feedbackMessage = successMessage;
         }
         catch (InvalidOperationException ex)
         {

@@ -59,11 +59,6 @@
                 <p class="lobby-message lobby-banner">@connectionMessage</p>
             }
 
-            @if (!string.IsNullOrWhiteSpace(feedbackMessage))
-            {
-                <p class="lobby-message lobby-banner">@feedbackMessage</p>
-            }
-
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 <p class="lobby-message lobby-message-error lobby-banner">@errorMessage</p>
@@ -202,7 +197,6 @@
     private Models.Lobby lobby;
     private HubConnection hub;
     private string connectionMessage = string.Empty;
-    private string feedbackMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string initializationError = string.Empty;
     private string chatMessage = string.Empty;
@@ -352,24 +346,17 @@
 
         var url = $"{NavigationManager.BaseUri}?lobbyId={lobby.Id}";
         await JSRuntime.InvokeVoidAsync("copyToClipboard", url);
-        feedbackMessage = "Invite link copied.";
-        errorMessage = null;
+        errorMessage = string.Empty;
     }
 
     private Task TogglePlayerReadyAsync() =>
         RunLobbyActionAsync(() => LobbyService.TogglePlayerReadyAsync(Id, PlayerId));
 
     private Task AddBotAsync() =>
-        RunLobbyActionAsync(
-            () => LobbyService.AddBotAsync(Id, PlayerId),
-            "Bot added."
-        );
+        RunLobbyActionAsync(() => LobbyService.AddBotAsync(Id, PlayerId));
 
     private Task RemoveBotAsync() =>
-        RunLobbyActionAsync(
-            () => LobbyService.RemoveBotAsync(Id, PlayerId),
-            "Bot removed."
-        );
+        RunLobbyActionAsync(() => LobbyService.RemoveBotAsync(Id, PlayerId));
 
     private Task StartGameAsync() =>
         RunLobbyActionAsync(() => LobbyService.StartGameAsync(Id, PlayerId));
@@ -423,7 +410,7 @@
         }
     }
 
-    private async Task RunLobbyActionAsync(Func<Task> action, string successMessage = "")
+    private async Task RunLobbyActionAsync(Func<Task> action)
     {
         if (isBusy)
         {
@@ -431,13 +418,11 @@
         }
 
         isBusy = true;
-        feedbackMessage = null;
-        errorMessage = null;
+        errorMessage = string.Empty;
 
         try
         {
             await action();
-            feedbackMessage = successMessage;
         }
         catch (InvalidOperationException ex)
         {

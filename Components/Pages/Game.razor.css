@@ -3,9 +3,11 @@
     min-height: 100vh;
     padding: 2rem;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
     background:
         linear-gradient(180deg, rgba(2, 2, 2, 0.9), rgba(2, 2, 2, 0.97)),
         radial-gradient(circle at top, rgba(161, 20, 20, 0.2), transparent 35%),
