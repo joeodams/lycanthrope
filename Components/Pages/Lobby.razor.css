@@ -1,0 +1,139 @@
+.lobby-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background:
+        radial-gradient(circle at top, rgba(118, 20, 20, 0.35), transparent 40%),
+        linear-gradient(180deg, #0b0b0d 0%, #14090a 100%);
+    color: #f6f1ea;
+}
+
+.lobby-panel {
+    width: min(52rem, 100%);
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(8, 8, 10, 0.86);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+}
+
+.lobby-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.lobby-header h1 {
+    margin: 0;
+}
+
+.lobby-subtitle {
+    margin: 0.35rem 0 0;
+    color: rgba(246, 241, 234, 0.72);
+}
+
+.lobby-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    text-align: right;
+    color: rgba(246, 241, 234, 0.8);
+}
+
+.lobby-message {
+    margin: 0 0 1rem;
+    color: #d7d2cb;
+}
+
+.lobby-message-error {
+    color: #ff8d8d;
+}
+
+.lobby-roster {
+    display: grid;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.player-row-self {
+    border-color: rgba(190, 39, 39, 0.65);
+}
+
+.player-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(190, 39, 39, 0.18);
+    color: #ffb4b4;
+}
+
+.player-state {
+    color: rgba(246, 241, 234, 0.8);
+}
+
+.lobby-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.lobby-button {
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+}
+
+.lobby-button:disabled {
+    opacity: 0.5;
+}
+
+.lobby-button-primary {
+    border-color: rgba(190, 39, 39, 0.65);
+    background: rgba(190, 39, 39, 0.18);
+}
+
+.lobby-note {
+    margin-top: 1rem;
+    color: rgba(246, 241, 234, 0.7);
+}
+
+.lobby-link {
+    color: #f0b1b1;
+}
+
+@media (max-width: 720px) {
+    .lobby-shell {
+        padding: 1rem;
+    }
+
+    .lobby-panel {
+        padding: 1.25rem;
+    }
+
+    .lobby-header,
+    .player-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .lobby-meta {
+        text-align: left;
+    }
+}

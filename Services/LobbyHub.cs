@@ -1,48 +1,109 @@
+#nullable enable
+
 using lycanthrope.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using lycanthrope.Models;
 using Microsoft.AspNetCore.SignalR;
 
-namespace lycanthrope.Services
+namespace lycanthrope.Services;
+
+public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<LobbyHub> logger) : Hub
 {
-    // [Authorize]
-    public class LobbyHub : Hub
+    public const string LobbyUpdatedMethod = "LobbyUpdated";
+    private const string IntentionalLeaveKey = "intentionalLeave";
+
+    public static string GroupName(Guid lobbyId) => $"lobby:{lobbyId:N}";
+
+    public override async Task OnConnectedAsync()
     {
-        public LobbyHub() { }
-
-        // Broadcast when a player joins
-        public async Task PlayerJoined(string lobbyId, string playerName)
+        if (!TryGetConnectionContext(out var lobbyId, out var playerId, out var playerName))
         {
-            await Clients.Group(lobbyId).SendAsync("ReceivePlayerJoined", playerName);
+            logger.LogWarning(
+                "Rejected lobby connection {ConnectionId} due to missing query parameters.",
+                Context.ConnectionId
+            );
+            throw new HubException("Missing lobby connection details.");
         }
 
-        // Broadcast when a player leaves
-        public async Task PlayerLeft(string lobbyId, string playerName)
+        try
         {
-            await Clients.Group(lobbyId).SendAsync("ReceivePlayerLeft", playerName);
-        }
-
-        // Broadcast when a player toggles ready
-        public async Task PlayerReadyToggle(string lobbyId, string playerName)
-        {
-            await Clients.Group(lobbyId).SendAsync("ReceivePlayerReadyToggle", playerName);
-        }
-
-        // On connect logic
-        public override async Task OnConnectedAsync()
-        {
-            var httpContext = Context.GetHttpContext().Request;
-
-            string lobbyId = Context.GetHttpContext().Request.Query["lobbyId"];
-            await Groups.AddToGroupAsync(Context.ConnectionId, lobbyId);
+            await gameEngineService.AddPlayerToLobbyAsync(
+                lobbyId,
+                new Player(playerId, playerName)
+            );
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(lobbyId));
             await base.OnConnectedAsync();
         }
-
-        // Remove users from the group when they disconnect
-        public override async Task OnDisconnectedAsync(Exception exception)
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
         {
-            string lobbyId = Context.GetHttpContext().Request.Query["lobbyId"];
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, lobbyId);
-            await base.OnDisconnectedAsync(exception);
+            logger.LogWarning(
+                ex,
+                "Unable to join lobby {LobbyId} for player {PlayerId}.",
+                lobbyId,
+                playerId
+            );
+            throw new HubException(ex.Message);
         }
+    }
+
+    public async Task LeaveLobby()
+    {
+        if (!TryGetConnectionContext(out var lobbyId, out var playerId, out _))
+        {
+            return;
+        }
+
+        Context.Items[IntentionalLeaveKey] = true;
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(lobbyId));
+        await gameEngineService.RemovePlayerFromLobbyAsync(lobbyId, playerId);
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var hasConnectionContext = TryGetConnectionContext(
+            out var lobbyId,
+            out var playerId,
+            out _
+        );
+
+        if (hasConnectionContext)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(lobbyId));
+        }
+
+        if (!HasLeftIntentionally() && hasConnectionContext)
+        {
+            await gameEngineService.RemovePlayerFromLobbyAsync(lobbyId, playerId);
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    private bool HasLeftIntentionally() =>
+        Context.Items.TryGetValue(IntentionalLeaveKey, out var value) && value is true;
+
+    private bool TryGetConnectionContext(out Guid lobbyId, out Guid playerId, out string playerName)
+    {
+        lobbyId = Guid.Empty;
+        playerId = Guid.Empty;
+        playerName = string.Empty;
+
+        var request = Context.GetHttpContext()?.Request;
+        if (request is null)
+        {
+            return false;
+        }
+
+        if (!Guid.TryParse(request.Query["lobbyId"], out lobbyId))
+        {
+            return false;
+        }
+
+        if (!Guid.TryParse(request.Query["playerId"], out playerId))
+        {
+            return false;
+        }
+
+        playerName = request.Query["playerName"].ToString();
+        return !string.IsNullOrWhiteSpace(playerName);
     }
 }

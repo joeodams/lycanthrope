@@ -13,5 +13,7 @@ namespace lycanthrope.Models
         public Phase Phase { get; set; }
 
         public string? Winner { get; set; }
+
+        public Guid? HostPlayerId { get; set; }
     }
 }

@@ -1,157 +1,316 @@
-@page "/lobby/{id:Guid}"
+@page "/lobby/{Id:guid}"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
+@using lycanthrope.Services
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
 
 @inject IGameEngineService LobbyService
-@inject IJSRuntime JSRuntime;
-@inject NavigationManager NavigationManager;
-@inject ILogger<Lobby> Log
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
-<h1>Lobby @Id</h1>
+<PageTitle>Lobby</PageTitle>
 
-<div class="lobby-container">
-    @if (lobby is null)
+<div class="lobby-shell">
+    @if (!string.IsNullOrWhiteSpace(initializationError))
     {
-        <p>Loading…</p>
+        <section class="lobby-panel">
+            <h1>Lobby unavailable</h1>
+            <p>@initializationError</p>
+            <a class="lobby-link" href="/?lobbyId=@Id">Return to the landing page</a>
+        </section>
+    }
+    else if (lobby is null)
+    {
+        <section class="lobby-panel">
+            <h1>Joining lobby</h1>
+            <p>@(connectionMessage ?? "Connecting to the lobby...")</p>
+        </section>
     }
     else
     {
-        @foreach (var p in lobby.Players)
-        {
-            <div>
-                <table>
-                    <tr>
-                        <td>
-                            <div>
-                                <p>@p.Name</p>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                @if (p.Ready)
-                                {
-                                    <p>Ready</p>
-                                }
-                                else
-                                {
-                                    <p>not ready</p>
-                                }
-                            </div>
-                        </td>
-                        @if (p.Id == PlayerId)
-                        {
-                            <td>
-                                <button @onclick="TogglePlayerReadyAsync">Toggle ready</button>
-                            </td>
-                        }
-                    </tr>
-                </table>
+        <section class="lobby-panel">
+            <div class="lobby-header">
+                <div>
+                    <h1>Lobby</h1>
+                    <p class="lobby-subtitle">Share this invite and get everyone ready.</p>
+                </div>
+                <div class="lobby-meta">
+                    <span>Code: @lobby.Id</span>
+                    <span>Phase: @lobby.Phase</span>
+                    <span>@PlayersReady / @lobby.Players.Count ready</span>
+                </div>
             </div>
-        }
+
+            @if (!string.IsNullOrWhiteSpace(connectionMessage))
+            {
+                <p class="lobby-message">@connectionMessage</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(feedbackMessage))
+            {
+                <p class="lobby-message">@feedbackMessage</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <p class="lobby-message lobby-message-error">@errorMessage</p>
+            }
+
+            @if (lobby.Phase != Phase.Setup)
+            {
+                <p class="lobby-message">
+                    The game has started. This page now reflects the current lobby state until we
+                    build the dedicated gameplay screen.
+                </p>
+            }
+
+            <div class="lobby-roster">
+                @foreach (var player in lobby.Players)
+                {
+                    <div class="player-row @(player.Id == PlayerId ? "player-row-self" : string.Empty)">
+                        <div>
+                            <strong>@player.Name</strong>
+                            @if (player.Id == lobby.HostPlayerId)
+                            {
+                                <span class="player-badge">Host</span>
+                            }
+                            @if (player.Id == PlayerId)
+                            {
+                                <span class="player-badge">You</span>
+                            }
+                        </div>
+                        <div class="player-state">
+                            @if (lobby.Phase == Phase.Setup)
+                            {
+                                <span>@(player.Ready ? "Ready" : "Waiting")</span>
+                            }
+                            else
+                            {
+                                <span>@(player.Alive ? "Alive" : "Out")</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="lobby-actions">
+                <button class="lobby-button" @onclick="CopyShareLinkAsync" disabled="@isBusy">
+                    Share lobby link
+                </button>
+                <button
+                    class="lobby-button"
+                    @onclick="TogglePlayerReadyAsync"
+                    disabled="@(!CanToggleReady || isBusy)">
+                    @(CurrentPlayer?.Ready == true ? "Mark not ready" : "Mark ready")
+                </button>
+                <button
+                    class="lobby-button lobby-button-primary"
+                    @onclick="StartGameAsync"
+                    disabled="@(!CanStartGame || isBusy)">
+                    Start game
+                </button>
+                <button class="lobby-button" @onclick="LeaveAsync" disabled="@isBusy">
+                    Leave
+                </button>
+            </div>
+
+            <p class="lobby-note">@StartRequirements</p>
+        </section>
     }
-
-    <button @onclick="CopyShareLinkAsync">Share lobby link</button>
-    <button @onclick="LeaveAsync">Leave</button>
-    <button @onclick="StartGameAsync">Start game</button>
-
 </div>
 
 @code
 {
-    [Parameter] public string Id { get; set; } // the lobbyId in the url
-    [SupplyParameterFromQuery] public string PlayerName { get; set; }
-    [SupplyParameterFromQuery] public Guid PlayerId { get; set; }
+    [Parameter]
+    public Guid Id { get; set; }
 
-    private lycanthrope.Models.Lobby lobby;
+    [SupplyParameterFromQuery]
+    public string PlayerName { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery]
+    public Guid PlayerId { get; set; }
+
+    private Models.Lobby lobby;
     private HubConnection hub;
+    private string connectionMessage = string.Empty;
+    private string feedbackMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private string initializationError = string.Empty;
+    private bool isBusy;
+    private bool isLeaving;
+
+    private Player CurrentPlayer => lobby?.Players.FirstOrDefault(player => player.Id == PlayerId);
+
+    private int PlayersReady => lobby?.Players.Count(player => player.Ready) ?? 0;
+
+    private bool CanToggleReady =>
+        lobby is not null && lobby.Phase == Phase.Setup && CurrentPlayer is not null;
+
+    private bool CanStartGame =>
+        lobby is not null
+        && lobby.Phase == Phase.Setup
+        && lobby.HostPlayerId == PlayerId
+        && lobby.Players.Count >= 4
+        && lobby.Players.All(player => player.Ready);
+
+    private string StartRequirements =>
+        lobby is null ? string.Empty
+        : lobby.Phase != Phase.Setup ? "The lobby is already in progress."
+        : lobby.HostPlayerId != PlayerId ? "Only the host can start the game."
+        : lobby.Players.Count < 4 ? "At least four players are required to start."
+        : lobby.Players.Any(player => !player.Ready)
+            ? "Everyone needs to mark ready before the game can begin."
+            : "The lobby is ready to start.";
 
     protected override async Task OnInitializedAsync()
     {
-        var lobbyId = Guid.Parse(Id);
-        var me = new Player(PlayerId, PlayerName);
+        if (PlayerId == Guid.Empty || string.IsNullOrWhiteSpace(PlayerName))
+        {
+            NavigationManager.NavigateTo($"/?lobbyId={Id}");
+            return;
+        }
 
-        // --- SignalR --------------------------------------------------------
+        await ConnectToLobbyAsync();
+    }
+
+    private async Task ConnectToLobbyAsync()
+    {
         hub = new HubConnectionBuilder()
-        .WithUrl(NavigationManager.ToAbsoluteUri($"/lobbyhub?lobbyId={lobbyId}"))
-        .WithAutomaticReconnect()
-        .Build();
+            .WithUrl(
+                NavigationManager.ToAbsoluteUri(
+                    $"/lobbyhub?lobbyId={Id}&playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}"
+                )
+            )
+            .WithAutomaticReconnect()
+            .Build();
 
-        // 1. register callbacks BEFORE you StartAsync()
-        hub.On<string>("ReceivePlayerJoined", async (name) =>
+        hub.On(LobbyHub.LobbyUpdatedMethod, ReloadLobbyAsync);
+
+        hub.Reconnecting += _ =>
         {
-            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId); // pull fresh state
-            await InvokeAsync(StateHasChanged);
-        });
+            connectionMessage = "Connection dropped. Reconnecting...";
+            return InvokeAsync(StateHasChanged);
+        };
 
-        hub.On<string>("ReceivePlayerLeft", async (name) =>
+        hub.Reconnected += async _ =>
         {
-            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
-            await InvokeAsync(StateHasChanged);
-        });
+            connectionMessage = "Reconnected to the lobby.";
+            await ReloadLobbyAsync();
+        };
 
-        hub.On<string>("ReceivePlayerReadyToggle", async (name) =>
+        hub.Closed += _ =>
         {
-            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
-            await InvokeAsync(StateHasChanged);
-        });
+            if (!isLeaving)
+            {
+                connectionMessage = "Disconnected from the lobby.";
+            }
 
-        hub.On<string>("ReceiveGameStarted", async (name) =>
+            return InvokeAsync(StateHasChanged);
+        };
+
+        try
         {
-            lobby = await LobbyService.GetLobbyByIdAsync(lobbyId);
-            await InvokeAsync(StateHasChanged);
-        });
-
-        hub.On("ReceiveGameStarted", async () =>
+            connectionMessage = "Connecting to the lobby...";
+            await hub.StartAsync();
+            await ReloadLobbyAsync();
+            connectionMessage = "Connected.";
+        }
+        catch (HubException ex)
         {
-            await InvokeAsync(() => RouteToGamePage());
-        });
+            initializationError = ex.Message;
+        }
+        catch
+        {
+            initializationError = "Unable to connect to this lobby right now.";
+        }
+    }
 
-        await hub.StartAsync();
-        //---------------------------------------------------------------------
+    private async Task ReloadLobbyAsync()
+    {
+        lobby = await LobbyService.GetLobbyByIdAsync(Id);
 
-        // 2. add yourself to the lobby (server side)
-        lobby = await LobbyService.AddPlayerToLobbyAsync(lobbyId, me);
+        if (!isLeaving && lobby.Players.All(player => player.Id != PlayerId))
+        {
+            NavigationManager.NavigateTo($"/?lobbyId={Id}");
+            return;
+        }
 
-        // 3. notify other clients
-        await hub.SendAsync("PlayerJoined", lobbyId.ToString(), me.Name);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task CopyShareLinkAsync()
     {
+        if (lobby is null)
+        {
+            return;
+        }
+
         var url = $"{NavigationManager.BaseUri}?lobbyId={lobby.Id}";
         await JSRuntime.InvokeVoidAsync("copyToClipboard", url);
+        feedbackMessage = "Invite link copied.";
+        errorMessage = null;
     }
 
-    private async Task TogglePlayerReadyAsync()
-    {
+    private Task TogglePlayerReadyAsync() =>
+        RunLobbyActionAsync(() => LobbyService.TogglePlayerReadyAsync(Id, PlayerId));
 
-        await LobbyService.TogglePlayerReadyAsync(Guid.Parse(Id), PlayerId);
-        await hub.SendAsync("PlayerReadyToggle", Id, PlayerName);
-
-    }
-
-    private void RouteToGamePage()
-    {
-        NavigationManager.NavigateTo($"/game/{Id}" +
-        $"?playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}");
-    }
+    private Task StartGameAsync() =>
+        RunLobbyActionAsync(() => LobbyService.StartGameAsync(Id, PlayerId));
 
     private async Task LeaveAsync()
     {
-        await hub.SendAsync("PlayerLeft", Id, PlayerName);
-        NavigationManager.NavigateTo("/");
+        if (hub is null)
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        await RunLobbyActionAsync(async () =>
+        {
+            isLeaving = true;
+            await hub.SendAsync(nameof(LobbyHub.LeaveLobby));
+            await hub.StopAsync();
+            NavigationManager.NavigateTo("/");
+        });
     }
 
-    private async Task StartGameAsync()
+    private async Task RunLobbyActionAsync(Func<Task> action)
     {
-        await LobbyService.StartGameAsync(Guid.Parse(Id));
-        await hub.SendAsync("GameStarted", Id, PlayerName);
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        feedbackMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            await action();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch
+        {
+            errorMessage = "That action could not be completed.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (hub is not null) await hub.DisposeAsync();
+        if (hub is not null)
+        {
+            await hub.DisposeAsync();
+        }
     }
 }
