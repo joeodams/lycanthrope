@@ -55,15 +55,10 @@ public class GameEngineService : IGameEngineService
         );
 
         await _db.SetAddAsync(LSet(lobbyId), playerKey);
-
-        var hostPlayerId = meta.HostPlayerId;
-        if (
-            hostPlayerId is null
-            || !await _db.SetContainsAsync(LSet(lobbyId), PKey(hostPlayerId.Value))
-        )
-        {
-            hostPlayerId = player.Id;
-        }
+        var hostPlayerId = SelectPreferredHostPlayerId(
+            await LoadPlayersAsync(lobbyId),
+            meta.HostPlayerId
+        );
 
         await SaveLobbyMeta(
             lobbyId,
@@ -127,15 +122,7 @@ public class GameEngineService : IGameEngineService
             return;
         }
 
-        var hostPlayerId = meta.HostPlayerId;
-        if (
-            hostPlayerId is null
-            || hostPlayerId == playerId
-            || !remainingPlayers.Any(player => player.Id == hostPlayerId.Value)
-        )
-        {
-            hostPlayerId = remainingPlayers.OrderBy(player => player.JoinedAtUtc).First().Id;
-        }
+        var hostPlayerId = SelectPreferredHostPlayerId(remainingPlayers, meta.HostPlayerId);
 
         await SaveLobbyMeta(
             lobbyId,
@@ -214,6 +201,7 @@ public class GameEngineService : IGameEngineService
             lobby.HostPlayerId,
             "Night 1 begins. Special roles, choose a target."
         );
+        await PopulateBotNightActionsAsync(lobbyId);
         await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
     }
 
@@ -324,6 +312,7 @@ public class GameEngineService : IGameEngineService
                     lobby.HostPlayerId,
                     lobby.LatestEvent
                 );
+                await PopulateBotVotesAsync(lobbyId);
                 break;
 
             case Phase.Day:
@@ -339,6 +328,7 @@ public class GameEngineService : IGameEngineService
                         dayMeta.HostPlayerId,
                         voteSummary
                     );
+                    await PopulateBotNightActionsAsync(lobbyId);
                 }
                 break;
 
@@ -539,6 +529,103 @@ public class GameEngineService : IGameEngineService
         );
     }
 
+    private async Task PopulateBotNightActionsAsync(Guid lobbyId)
+    {
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        if (lobby.Phase != Phase.Night)
+        {
+            return;
+        }
+
+        var livingBots = lobby.Players.Where(player => player.IsBot && player.Alive).ToList();
+        if (livingBots.Count == 0)
+        {
+            return;
+        }
+
+        var submittedActorIds = await LoadSubmittedActorIdsAsync(Acts(lobbyId));
+        var werewolfTarget = PickRandomTarget(
+            lobby.Players.Where(player => player.Alive && player.Role != Role.Werewolf).ToList()
+        );
+
+        foreach (var bot in livingBots)
+        {
+            if (submittedActorIds.Contains(bot.Id))
+            {
+                continue;
+            }
+
+            var actionType = GetNightActionForRole(bot.Role);
+            if (actionType is null)
+            {
+                continue;
+            }
+
+            var targetId = actionType switch
+            {
+                NightAct.Kill => werewolfTarget,
+                NightAct.Inspect => PickRandomTarget(
+                    lobby.Players.Where(player => player.Alive && player.Id != bot.Id).ToList()
+                ),
+                NightAct.Protect => PickRandomTarget(
+                    lobby.Players.Where(player => player.Alive).ToList()
+                ),
+                _ => null,
+            };
+
+            if (targetId is null)
+            {
+                continue;
+            }
+
+            await _db.HashSetAsync(
+                Acts(lobbyId),
+                bot.Id.ToString(),
+                Serialize(new NightAction(bot.Id, actionType.Value, targetId))
+            );
+        }
+    }
+
+    private async Task PopulateBotVotesAsync(Guid lobbyId)
+    {
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        if (lobby.Phase != Phase.Day)
+        {
+            return;
+        }
+
+        var livingBots = lobby.Players.Where(player => player.IsBot && player.Alive).ToList();
+        if (livingBots.Count == 0)
+        {
+            return;
+        }
+
+        var submittedVoterIds = await LoadSubmittedActorIdsAsync(Votes(lobbyId));
+        var commonTarget = PickRandomTarget(lobby.Players.Where(player => player.Alive).ToList());
+
+        foreach (var bot in livingBots)
+        {
+            if (submittedVoterIds.Contains(bot.Id))
+            {
+                continue;
+            }
+
+            var eligibleTargets = lobby.Players
+                .Where(player => player.Alive && player.Id != bot.Id)
+                .ToList();
+            var targetId = commonTarget == bot.Id
+                ? PickRandomTarget(eligibleTargets)
+                : commonTarget ?? PickRandomTarget(eligibleTargets);
+
+            if (targetId is null)
+            {
+                continue;
+            }
+
+            await _db.HashSetAsync(Votes(lobbyId), bot.Id.ToString(), targetId.ToString());
+        }
+    }
+
     private async Task<List<Player>> LoadPlayersAsync(Guid lobbyId)
     {
         var players = new List<Player>();
@@ -574,6 +661,15 @@ public class GameEngineService : IGameEngineService
     {
         var value = await _db.HashGetAsync(Votes(lobbyId), playerId.ToString());
         return Guid.TryParse(value.ToString(), out var targetId) ? targetId : null;
+    }
+
+    private async Task<HashSet<Guid>> LoadSubmittedActorIdsAsync(string key)
+    {
+        var entries = await _db.HashGetAllAsync(key);
+        return entries
+            .Select(entry => Guid.TryParse(entry.Name.ToString(), out var id) ? id : (Guid?)null)
+            .OfType<Guid>()
+            .ToHashSet();
     }
 
     private async Task ClearRoundStateAsync(Guid lobbyId) =>
@@ -633,6 +729,32 @@ public class GameEngineService : IGameEngineService
         }
     }
 
+    private static Guid? SelectPreferredHostPlayerId(
+        IReadOnlyCollection<Player> players,
+        Guid? currentHostPlayerId
+    )
+    {
+        if (players.Count == 0)
+        {
+            return null;
+        }
+
+        var currentHost = currentHostPlayerId is Guid hostId
+            ? players.FirstOrDefault(player => player.Id == hostId)
+            : null;
+
+        if (currentHost is not null && (!currentHost.IsBot || players.All(player => player.IsBot)))
+        {
+            return currentHost.Id;
+        }
+
+        return players
+            .OrderBy(player => player.IsBot)
+            .ThenBy(player => player.JoinedAtUtc)
+            .Select(player => (Guid?)player.Id)
+            .First();
+    }
+
     private static NightAct? GetNightActionForRole(Role role) =>
         role switch
         {
@@ -685,6 +807,16 @@ public class GameEngineService : IGameEngineService
         }
 
         return groupedTargets[0].Key;
+    }
+
+    private static Guid? PickRandomTarget(IReadOnlyList<Player> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        return candidates[Random.Shared.Next(candidates.Count)].Id;
     }
 
     private record Meta(
