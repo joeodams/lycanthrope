@@ -1,60 +1,182 @@
 .lobby-shell {
+    position: relative;
     min-height: 100vh;
+    padding: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    overflow: hidden;
     background:
-        radial-gradient(circle at top, rgba(118, 20, 20, 0.35), transparent 40%),
-        linear-gradient(180deg, #0b0b0d 0%, #14090a 100%);
-    color: #f6f1ea;
+        linear-gradient(180deg, rgba(2, 2, 2, 0.88), rgba(2, 2, 2, 0.96)),
+        radial-gradient(circle at top, rgba(161, 20, 20, 0.22), transparent 36%),
+        url('/lycanthrope.webp') top center / cover no-repeat,
+        #020202;
+    color: var(--bone-0);
+}
+
+.lobby-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0, rgba(255, 255, 255, 0) 18%),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0, rgba(255, 255, 255, 0) 22%);
+    pointer-events: none;
+    mix-blend-mode: screen;
 }
 
 .lobby-panel {
-    width: min(52rem, 100%);
+    position: relative;
+    z-index: 1;
+    width: min(78rem, 100%);
     padding: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(8, 8, 10, 0.86);
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--line-1);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        var(--panel-0);
+    box-shadow: var(--shadow-0);
+    backdrop-filter: blur(0.45rem);
+    animation: lobby-rise 420ms ease-out both;
+}
+
+.lobby-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    pointer-events: none;
 }
 
 .lobby-header {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 2rem;
+    align-items: flex-start;
     margin-bottom: 1.5rem;
+}
+
+.lobby-titleblock {
+    max-width: 42rem;
+}
+
+.lobby-overline {
+    margin: 0 0 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-size: 0.72rem;
+    color: var(--bone-0);
 }
 
 .lobby-header h1 {
     margin: 0;
+    font-family: var(--display-font);
+    font-size: clamp(3.1rem, 6vw, 5.2rem);
+    line-height: 0.95;
+    letter-spacing: 0.04em;
+    color: #d12222;
+    text-shadow: 0 0.4rem 1.4rem rgba(0, 0, 0, 0.45);
 }
 
 .lobby-subtitle {
-    margin: 0.35rem 0 0;
-    color: rgba(246, 241, 234, 0.72);
+    margin: 0.8rem 0 0;
+    max-width: 34rem;
+    font-size: 1.3rem;
+    color: var(--bone-0);
 }
 
 .lobby-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    text-align: right;
-    color: rgba(246, 241, 234, 0.8);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-width: min(28rem, 100%);
+}
+
+.lobby-meta-chip {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line-0);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+    text-align: left;
+}
+
+.lobby-meta-chip strong {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--bone-0);
+}
+
+.lobby-meta-chip span {
+    font-size: 1.1rem;
+    color: var(--bone-0);
+}
+
+.lobby-banner {
+    margin: 0 0 1rem;
+    padding: 0.8rem 1rem;
+    border-left: 3px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .lobby-message {
-    margin: 0 0 1rem;
-    color: #d7d2cb;
+    color: var(--bone-0);
 }
 
 .lobby-message-error {
-    color: #ff8d8d;
+    border-left-color: rgba(209, 48, 48, 0.8);
+    color: #ffb0b0;
+    background: rgba(161, 20, 20, 0.12);
+}
+
+.lobby-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.lobby-section {
+    padding: 1.25rem;
+    border: 1px solid var(--line-0);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+        var(--panel-1);
+}
+
+.lobby-section-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.lobby-section-header h2 {
+    margin: 0.1rem 0 0;
+    font-size: 1.8rem;
+    color: var(--bone-0);
+}
+
+.lobby-section-kicker {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.72rem;
+    color: var(--bone-0);
+}
+
+.lobby-section-stat {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(209, 48, 48, 0.24);
+    color: #efcfcf;
+    background: rgba(161, 20, 20, 0.1);
+    white-space: nowrap;
 }
 
 .lobby-roster {
     display: grid;
     gap: 0.75rem;
-    margin: 1.5rem 0;
 }
 
 .player-row {
@@ -62,81 +184,109 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.95rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.player-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.03);
 }
 
 .player-row-self {
-    border-color: rgba(190, 39, 39, 0.65);
+    border-color: rgba(209, 48, 48, 0.35);
+    background: linear-gradient(90deg, rgba(161, 20, 20, 0.12), rgba(255, 255, 255, 0.015));
+}
+
+.player-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.player-status-mark {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0.75rem transparent;
+}
+
+.player-status-ready {
+    background: #e7e7e7;
+    box-shadow: 0 0 0.9rem rgba(255, 255, 255, 0.35);
+}
+
+.player-status-waiting {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.player-status-dead {
+    background: rgba(209, 48, 48, 0.7);
+    box-shadow: 0 0 0.75rem rgba(161, 20, 20, 0.42);
+}
+
+.player-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
 }
 
 .player-badge {
-    display: inline-block;
-    margin-left: 0.5rem;
+    display: inline-flex;
+    align-items: center;
     padding: 0.15rem 0.45rem;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    background: rgba(190, 39, 39, 0.18);
-    color: #ffb4b4;
+    letter-spacing: 0.14em;
+    border: 1px solid rgba(209, 48, 48, 0.22);
+    background: rgba(161, 20, 20, 0.11);
+    color: #f3d1d1;
 }
 
 .player-state {
-    color: rgba(246, 241, 234, 0.8);
-}
-
-.lobby-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    font-size: 1rem;
+    color: var(--bone-0);
+    white-space: nowrap;
 }
 
 .lobby-chat {
-    margin-top: 1.5rem;
-    padding: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.lobby-chat-header {
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: baseline;
-    margin-bottom: 1rem;
-}
-
-.lobby-chat-header h2 {
-    margin: 0;
+    flex-direction: column;
 }
 
 .lobby-chat-log {
     display: grid;
     gap: 0.75rem;
-    max-height: 18rem;
+    max-height: 24rem;
+    padding-right: 0.25rem;
     overflow-y: auto;
 }
 
 .lobby-chat-empty {
     margin: 0;
-    color: rgba(246, 241, 234, 0.68);
+    color: var(--bone-0);
+    font-style: italic;
 }
 
 .lobby-chat-message {
     padding: 0.85rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(255, 255, 255, 0.02);
 }
 
 .lobby-chat-message-self {
-    border-color: rgba(190, 39, 39, 0.35);
+    border-color: rgba(209, 48, 48, 0.28);
+    background: linear-gradient(90deg, rgba(161, 20, 20, 0.1), rgba(255, 255, 255, 0.02));
 }
 
 .lobby-chat-message-system {
-    border-color: rgba(190, 39, 39, 0.18);
-    background: rgba(190, 39, 39, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.035);
 }
 
 .lobby-chat-meta {
@@ -144,11 +294,13 @@
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 0.35rem;
-    color: rgba(246, 241, 234, 0.72);
+    color: var(--bone-0);
+    font-size: 0.95rem;
 }
 
 .lobby-chat-message p {
     margin: 0;
+    font-size: 1.08rem;
 }
 
 .lobby-chat-compose {
@@ -157,42 +309,92 @@
     margin-top: 1rem;
 }
 
+.lobby-chat-input,
+.lobby-button {
+    min-height: 3.1rem;
+}
+
 .lobby-chat-input {
     flex: 1;
     min-width: 0;
-    padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(7, 7, 9, 0.9);
-    color: inherit;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--line-0);
+    background: rgba(3, 3, 4, 0.92);
+    color: var(--bone-0);
 }
 
 .lobby-chat-input::placeholder {
-    color: rgba(246, 241, 234, 0.45);
+    color: rgba(244, 237, 226, 0.4);
+}
+
+.lobby-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
 }
 
 .lobby-button {
-    padding: 0.75rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
-    color: inherit;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--line-1);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+        rgba(5, 5, 6, 0.92);
+    color: var(--bone-0);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.84rem;
+    transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.lobby-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(209, 48, 48, 0.45);
 }
 
 .lobby-button:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
 }
 
 .lobby-button-primary {
-    border-color: rgba(190, 39, 39, 0.65);
-    background: rgba(190, 39, 39, 0.18);
+    border-color: rgba(209, 48, 48, 0.54);
+    background:
+        linear-gradient(180deg, rgba(209, 48, 48, 0.22), rgba(82, 9, 9, 0.34)),
+        rgba(5, 5, 6, 0.92);
+    color: #fff2f2;
 }
 
 .lobby-note {
-    margin-top: 1rem;
-    color: rgba(246, 241, 234, 0.7);
+    margin: 1rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 1.08rem;
+    color: var(--bone-0);
 }
 
 .lobby-link {
-    color: #f0b1b1;
+    color: #f1cfcf;
+}
+
+@keyframes lobby-rise {
+    from {
+        opacity: 0;
+        transform: translateY(1.2rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 960px) {
+
+    .lobby-grid,
+    .lobby-actions,
+    .lobby-meta {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 720px) {
@@ -205,18 +407,25 @@
     }
 
     .lobby-header,
+    .lobby-section-header,
     .player-row,
-    .lobby-chat-header,
     .lobby-chat-compose {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .lobby-meta {
-        text-align: left;
+    .player-row,
+    .lobby-meta-chip {
+        width: 100%;
     }
 
-    .lobby-chat-input {
+    .player-state,
+    .lobby-section-stat {
+        white-space: normal;
+    }
+
+    .lobby-chat-input,
+    .lobby-button {
         width: 100%;
     }
 }

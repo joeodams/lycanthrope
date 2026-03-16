@@ -5,9 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="lycanthrope.styles.css" />
+    <link rel="stylesheet" href="@VersionedAsset("bootstrap/bootstrap.min.css")" />
+    <link rel="stylesheet" href="@VersionedAsset("app.css")" />
+    <link rel="stylesheet" href="@VersionedAsset("lycanthrope.styles.css")" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
 </head>
@@ -28,3 +28,9 @@
 </body>
 
 </html>
+
+@code {
+    private static readonly string AssetVersion = typeof(Program).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+
+    private static string VersionedAsset(string path) => $"{path}?v={AssetVersion}";
+}

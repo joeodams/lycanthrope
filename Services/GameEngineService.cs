@@ -125,19 +125,7 @@ public class GameEngineService : IGameEngineService
 
         await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
         await FillSeatsAsync(lobbyId, demoPlayer.Id);
-        var lobby = await GetLobbyByIdAsync(lobbyId);
-        EnsureHost(lobby, demoPlayer.Id);
-        EnsureLobbyCanStart(lobby);
-
-        await BeginGameAsync(
-            lobby,
-            Phase.Day,
-            1,
-            "Demo mode skips the opening night. Day 1 begins. Discuss and vote.",
-            populateBotNightActions: false,
-            populateBotVotes: true
-        );
-        await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
+        await StartGameAsync(lobbyId, demoPlayer.Id);
 
         return lobbyId;
     }
@@ -561,16 +549,11 @@ public class GameEngineService : IGameEngineService
     {
         var random = new Random();
         var shuffled = lobby.Players.OrderBy(_ => random.Next()).ToList();
+        var roles = BuildRoleDeck(shuffled.Count);
 
         for (var index = 0; index < shuffled.Count; index++)
         {
-            shuffled[index].Role = index switch
-            {
-                0 or 1 => Role.Werewolf,
-                2 => Role.Seer,
-                3 => Role.Doctor,
-                _ => Role.Villager,
-            };
+            shuffled[index].Role = roles[index];
         }
 
         await Task.WhenAll(
@@ -586,6 +569,23 @@ public class GameEngineService : IGameEngineService
                 )
             )
         );
+    }
+
+    private static List<Role> BuildRoleDeck(int playerCount)
+    {
+        var roles = new List<Role> { Role.Werewolf, Role.Seer, Role.Doctor };
+
+        if (playerCount >= 6)
+        {
+            roles.Add(Role.Werewolf);
+        }
+
+        while (roles.Count < playerCount)
+        {
+            roles.Add(Role.Villager);
+        }
+
+        return roles;
     }
 
     private async Task PopulateBotNightActionsAsync(Guid lobbyId)

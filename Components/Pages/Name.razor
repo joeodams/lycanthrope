@@ -11,29 +11,16 @@
     <div class="input-container">
         <div class="input-panel">
             <EditForm Model="@player" OnValidSubmit="HandleLobbySubmitAsync" class="name-form">
-                <InputText
-                    class="name-input"
-                    @bind-Value="player.Name"
-                    @ref="nameInput"
-                    disabled="@isBusy" />
+                <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" disabled="@isBusy" />
                 <div class="landing-actions">
-                    <button
-                        class="landing-button landing-button-primary"
-                        type="submit"
-                        disabled="@isBusy">
+                    <button class="landing-button landing-button-primary" type="submit" disabled="@isBusy">
                         @PrimaryActionLabel
                     </button>
-                    <button
-                        class="landing-button"
-                        type="button"
-                        @onclick="HandleDemoGameAsync"
-                        disabled="@isBusy">
+                    <button class="landing-button" type="button" @onclick="HandleDemoGameAsync" disabled="@isBusy">
                         Play Demo
                     </button>
                 </div>
             </EditForm>
-
-            <p class="landing-message">@HelperText</p>
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
