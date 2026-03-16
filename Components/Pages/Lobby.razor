@@ -51,13 +51,15 @@
                         <strong>Ready</strong>
                         <span>@PlayersReady / @lobby.Players.Count</span>
                     </span>
+                    @if (!string.IsNullOrWhiteSpace(connectionMessage))
+                    {
+                        <span class="lobby-meta-chip">
+                            <strong>Connection</strong>
+                            <span>@connectionMessage</span>
+                        </span>
+                    }
                 </div>
             </div>
-
-            @if (!string.IsNullOrWhiteSpace(connectionMessage))
-            {
-                <p class="lobby-message lobby-banner">@connectionMessage</p>
-            }
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
@@ -65,12 +67,11 @@
             }
 
             <div class="lobby-grid">
-                <section class="lobby-section">
+                <section class="lobby-section lobby-roster-section">
                     <div class="lobby-section-header">
                         <div>
                             <p class="lobby-section-kicker">Roster</p>
                         </div>
-                        <span class="lobby-section-stat">@lobby.Players.Count souls</span>
                     </div>
 
                     <div class="lobby-roster">

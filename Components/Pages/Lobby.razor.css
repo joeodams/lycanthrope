@@ -88,9 +88,9 @@
 
 .lobby-meta {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
-    min-width: min(28rem, 100%);
+    min-width: min(36rem, 100%);
 }
 
 .lobby-meta-chip {
@@ -136,6 +136,7 @@
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
     gap: 1rem;
     margin-top: 1.5rem;
+    align-items: start;
 }
 
 .lobby-section {
@@ -144,6 +145,12 @@
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
         var(--panel-1);
+}
+
+.lobby-roster-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .lobby-section-header {
@@ -179,6 +186,10 @@
 .lobby-roster {
     display: grid;
     gap: 0.75rem;
+    max-height: min(31rem, calc(100vh - 24rem));
+    min-height: 0;
+    padding-right: 0.25rem;
+    overflow-y: auto;
 }
 
 .player-row {
