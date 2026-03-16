@@ -1,12 +1,13 @@
 .game-shell {
     position: relative;
     min-height: 100vh;
+    height: 100vh;
     padding: 2rem;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
     scrollbar-gutter: stable;
     background:
         linear-gradient(180deg, rgba(2, 2, 2, 0.9), rgba(2, 2, 2, 0.97)),
@@ -30,7 +31,11 @@
     position: relative;
     z-index: 1;
     width: min(84rem, 100%);
+    height: calc(100vh - 4rem);
+    min-height: 0;
     padding: 2rem;
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--line-1);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
@@ -144,6 +149,9 @@
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
     grid-template-areas: "command roster";
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
     gap: 1rem;
     margin-top: 1rem;
 }
@@ -212,13 +220,16 @@
 
 .game-command {
     grid-area: command;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 1.25rem;
-    align-content: start;
+    min-height: 0;
 }
 
 .game-roster-card {
     grid-area: roster;
+    display: flex;
+    min-height: 0;
 }
 
 .game-decision {
@@ -232,7 +243,8 @@
     display: grid;
     gap: 0.75rem;
     align-content: start;
-    height: calc((4 * 5.5rem) + (3 * 0.75rem));
+    flex: 1 1 auto;
+    min-height: 0;
     padding-right: 0.25rem;
     overflow-y: auto;
 }
@@ -305,6 +317,7 @@
 
 .game-chat {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     padding-top: 0.25rem;
@@ -312,8 +325,9 @@
 
 .game-chat-log {
     display: grid;
+    flex: 1 1 auto;
     gap: 0.75rem;
-    height: 16rem;
+    min-height: 0;
     padding-right: 0.25rem;
     overflow-y: auto;
 }
@@ -435,11 +449,34 @@
 }
 
 @media (max-width: 960px) {
+    .game-shell {
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .game-panel {
+        height: auto;
+    }
+
     .game-grid {
+        flex: initial;
         grid-template-columns: 1fr;
         grid-template-areas:
             "command"
             "roster";
+        min-height: auto;
+    }
+
+    .game-roster-card,
+    .game-command,
+    .game-chat {
+        min-height: auto;
+    }
+
+    .game-roster,
+    .game-chat-log {
+        flex: initial;
+        min-height: auto;
     }
 }
 
