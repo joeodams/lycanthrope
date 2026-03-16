@@ -12,7 +12,7 @@
     background:
         linear-gradient(180deg, rgba(2, 2, 2, 0.9), rgba(2, 2, 2, 0.97)),
         radial-gradient(circle at top, rgba(161, 20, 20, 0.2), transparent 35%),
-        url('/lycanthrope.webp') center top / cover no-repeat,
+        /* url('/lycanthrope.webp') center top / cover no-repeat, */
         #020202;
     color: var(--bone-0);
 }

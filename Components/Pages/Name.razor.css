@@ -2,15 +2,14 @@
     position: relative;
     top: 0;
     left: 0;
-    background-image: url('lycanthrope.webp');
+    background-image: url('title.png');
     background-color: #040404;
     background-size: contain;
-    background-position: top center;
+    background-position: center -6rem;
     background-repeat: no-repeat;
     height: 100vh;
     padding-bottom: 20vh;
     box-sizing: border-box;
-    /* z-index: -1; */
 }
 
 .input-container {
@@ -54,6 +53,16 @@
 
 }
 
+::deep .name-input.valid.modified,
+::deep .name-input.invalid {
+    outline: none;
+    box-shadow: none;
+}
+
+::deep .name-input.invalid {
+    border-bottom-color: rgba(180, 44, 44, 0.85);
+}
+
 .landing-actions {
     display: flex;
     justify-content: center;
@@ -93,6 +102,10 @@
 }
 
 @media (max-width: 720px) {
+    .fullscreen-background {
+        background-position: center -2.5rem;
+    }
+
     ::deep .name-input {
         font-size: 4rem;
     }
