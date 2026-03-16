@@ -1,49 +1,129 @@
 @page "/"
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@using System.Diagnostics
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
-@inject ILoggerFactory LoggerFactory
+
+@inject IGameEngineService GameEngineService
+@inject NavigationManager Navigation
 
 <div class="fullscreen-background">
     <div class="input-container">
-        <EditForm Model="@player" OnValidSubmit="HandleValidSubmit" style="width: 100%; height: 10%;">
-            <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" />
-        </EditForm>
+        <div class="input-panel">
+            <EditForm Model="@player" OnValidSubmit="HandleLobbySubmitAsync" class="name-form">
+                <InputText
+                    class="name-input"
+                    @bind-Value="player.Name"
+                    @ref="nameInput"
+                    disabled="@isBusy" />
+                <div class="landing-actions">
+                    <button
+                        class="landing-button landing-button-primary"
+                        type="submit"
+                        disabled="@isBusy">
+                        @PrimaryActionLabel
+                    </button>
+                    <button
+                        class="landing-button"
+                        type="button"
+                        @onclick="HandleDemoGameAsync"
+                        disabled="@isBusy">
+                        Play Demo
+                    </button>
+                </div>
+            </EditForm>
+
+            <p class="landing-message">@HelperText</p>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <p class="landing-message landing-message-error">@errorMessage</p>
+            }
+        </div>
     </div>
 </div>
 
-
 @code {
     [SupplyParameterFromQuery]
-    public string LobbyId { get; set; }
+    public string LobbyId { get; set; } = string.Empty;
+
     private InputText nameInput;
+    private readonly Player player = new();
+    private string errorMessage = string.Empty;
+    private bool isBusy;
 
-    private Player player = new Player();
+    private string PrimaryActionLabel =>
+        string.IsNullOrWhiteSpace(LobbyId) ? "Create Lobby" : "Join Lobby";
 
-    [Inject]
-    private NavigationManager Navigation { get; set; }
+    private string HelperText =>
+        string.IsNullOrWhiteSpace(LobbyId)
+            ? "Press Enter to create a lobby with friends, or launch a bot-filled demo."
+            : "Press Enter to join this invite, or launch a separate bot-filled demo.";
 
-    private void HandleValidSubmit()
+    private async Task HandleLobbySubmitAsync()
     {
-        var encodedPlayerName = Uri.EscapeDataString(player.Name);
+        if (!TryPreparePlayer(out var encodedPlayerName))
+        {
+            return;
+        }
 
-        if (!string.IsNullOrWhiteSpace(LobbyId))
+        var destination = !string.IsNullOrWhiteSpace(LobbyId)
+            ? $"/lobby/{LobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
+            : $"/lobby/{Guid.NewGuid()}?playerName={encodedPlayerName}&playerId={player.Id}";
+
+        await NavigateAsync(destination);
+    }
+
+    private async Task HandleDemoGameAsync()
+    {
+        if (!TryPreparePlayer(out var encodedPlayerName))
         {
-            //validate lobby ID
-            Navigation.NavigateTo(
-                $"/lobby/{LobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var demoLobbyId = await GameEngineService.CreateDemoGameAsync(player);
+            await NavigateAsync(
+                $"/game/{demoLobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
             );
         }
-        else
+        catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"name created: {player.Name}");
-            var newLobbyId = Guid.NewGuid();
-            Navigation.NavigateTo(
-                $"/lobby/{newLobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
-            );
+            errorMessage = ex.Message;
         }
+        catch
+        {
+            errorMessage = "Unable to create a demo game right now.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private bool TryPreparePlayer(out string encodedPlayerName)
+    {
+        player.Name = player.Name.Trim();
+        if (string.IsNullOrWhiteSpace(player.Name))
+        {
+            errorMessage = "Enter a name before continuing.";
+            encodedPlayerName = string.Empty;
+            return false;
+        }
+
+        errorMessage = string.Empty;
+        encodedPlayerName = Uri.EscapeDataString(player.Name);
+        return true;
+    }
+
+    private Task NavigateAsync(string destination)
+    {
+        Navigation.NavigateTo(destination);
+        return Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

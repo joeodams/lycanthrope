@@ -102,6 +102,27 @@ public class GameEngineService : IGameEngineService
         }
     }
 
+    public async Task<Guid> CreateDemoGameAsync(Player player)
+    {
+        var trimmedName = player.Name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            throw new InvalidOperationException("Enter a player name before starting a demo game.");
+        }
+
+        var demoPlayer = new Player(player.Id, trimmedName)
+        {
+            Ready = true,
+        };
+        var lobbyId = Guid.NewGuid();
+
+        await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
+        await FillSeatsAsync(lobbyId, demoPlayer.Id);
+        await StartGameAsync(lobbyId, demoPlayer.Id);
+
+        return lobbyId;
+    }
+
     public async Task RemovePlayerFromLobbyAsync(Guid lobbyId, Guid playerId)
     {
         var meta = await LoadLobbyMeta(lobbyId);
