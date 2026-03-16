@@ -10,6 +10,8 @@ public interface IGameEngineService
 
     Task AdvancePhaseAsync(Guid lobbyId, Guid requestedByPlayerId);
 
+    Task FillSeatsAsync(Guid lobbyId, Guid requestedByPlayerId);
+
     Task<GameView> GetGameViewAsync(Guid lobbyId, Guid playerId);
 
     Task<Lobby> GetLobbyByIdAsync(Guid lobbyId);

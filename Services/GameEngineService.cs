@@ -11,6 +11,7 @@ namespace lycanthrope.Services;
 public class GameEngineService : IGameEngineService
 {
     private const int MinimumPlayersToStart = 4;
+    private const string BotNamePrefix = "Bot";
     private readonly IDatabase _db;
     private readonly ILobbyNotificationService _notifications;
 
@@ -36,6 +37,7 @@ public class GameEngineService : IGameEngineService
             ReadOptionalDateTimeOffset(existingHash, "JoinedAtUtc") ?? player.JoinedAtUtc;
         var ready = ReadOptionalBoolean(existingHash, "Ready") ?? player.Ready;
         var alive = ReadOptionalBoolean(existingHash, "Alive") ?? true;
+        var isBot = ReadOptionalBoolean(existingHash, "IsBot") ?? player.IsBot;
         var role = ReadOptionalEnum<Role>(existingHash, "Role") ?? Role.Villager;
 
         await _db.HashSetAsync(
@@ -46,6 +48,7 @@ public class GameEngineService : IGameEngineService
                 new("Ready", RedisBool.FromBool(ready)),
                 new("Role", role.ToString()),
                 new("Alive", RedisBool.FromBool(alive)),
+                new("IsBot", RedisBool.FromBool(isBot)),
                 new("Lobby", lobbyId.ToString()),
                 new("JoinedAtUtc", joinedAtUtc.UtcDateTime.ToString("O")),
             ]
@@ -74,6 +77,34 @@ public class GameEngineService : IGameEngineService
         var lobby = await GetLobbyByIdAsync(lobbyId);
         await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
         return lobby;
+    }
+
+    public async Task FillSeatsAsync(Guid lobbyId, Guid requestedByPlayerId)
+    {
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        EnsureHost(lobby, requestedByPlayerId);
+
+        if (lobby.Phase != Phase.Setup)
+        {
+            throw new InvalidOperationException("Seats can only be filled before the game starts.");
+        }
+
+        var seatsToFill = MinimumPlayersToStart - lobby.Players.Count;
+        if (seatsToFill <= 0)
+        {
+            throw new InvalidOperationException("This lobby already has enough players to start.");
+        }
+
+        var existingNames = lobby.Players
+            .Select(player => player.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = 0; index < seatsToFill; index++)
+        {
+            var bot = CreateBotPlayer(existingNames);
+            existingNames.Add(bot.Name);
+            await AddPlayerToLobbyAsync(lobbyId, bot);
+        }
     }
 
     public async Task RemovePlayerFromLobbyAsync(Guid lobbyId, Guid playerId)
@@ -725,9 +756,29 @@ public class GameEngineService : IGameEngineService
         )
         {
             Alive = hash.Single(entry => entry.Name == "Alive").Value.ToBool(),
+            IsBot = ReadOptionalBoolean(hash, "IsBot") ?? false,
             Ready = hash.Single(entry => entry.Name == "Ready").Value.ToBool(),
             Role = Enum.Parse<Role>(GetRequiredHashValue(hash, "Role")),
             JoinedAtUtc = ReadOptionalDateTimeOffset(hash, "JoinedAtUtc") ?? DateTimeOffset.UtcNow,
+        };
+    }
+
+    private static Player CreateBotPlayer(HashSet<string> existingNames)
+    {
+        var suffix = 1;
+        string name;
+
+        do
+        {
+            name = $"{BotNamePrefix} {suffix}";
+            suffix++;
+        } while (existingNames.Contains(name));
+
+        return new Player(Guid.NewGuid(), name)
+        {
+            Alive = true,
+            IsBot = true,
+            Ready = true,
         };
     }
 

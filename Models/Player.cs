@@ -28,5 +28,7 @@ public class Player
 
     public bool Alive { get; set; }
 
+    public bool IsBot { get; set; }
+
     public DateTimeOffset JoinedAtUtc { get; set; }
 }

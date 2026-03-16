@@ -66,6 +66,10 @@
                     <div class="player-row @(player.Id == PlayerId ? "player-row-self" : string.Empty)">
                         <div>
                             <strong>@player.Name</strong>
+                            @if (player.IsBot)
+                            {
+                                <span class="player-badge">Bot</span>
+                            }
                             @if (player.Id == lobby.HostPlayerId)
                             {
                                 <span class="player-badge">Host</span>
@@ -100,6 +104,12 @@
                     @(CurrentPlayer is not null && CurrentPlayer.Ready ? "Mark not ready" : "Mark ready")
                 </button>
                 <button
+                    class="lobby-button"
+                    @onclick="FillSeatsAsync"
+                    disabled="@(!CanFillSeats || isBusy)">
+                    Fill seats
+                </button>
+                <button
                     class="lobby-button lobby-button-primary"
                     @onclick="StartGameAsync"
                     disabled="@(!CanStartGame || isBusy)">
@@ -117,6 +127,8 @@
 
 @code
 {
+    private const int MinimumPlayersToStart = 4;
+
     [Parameter]
     public Guid Id { get; set; }
 
@@ -142,18 +154,25 @@
     private bool CanToggleReady =>
         lobby is not null && lobby.Phase == Phase.Setup && CurrentPlayer is not null;
 
+    private bool CanFillSeats =>
+        lobby is not null
+        && lobby.Phase == Phase.Setup
+        && lobby.HostPlayerId == PlayerId
+        && lobby.Players.Count < MinimumPlayersToStart;
+
     private bool CanStartGame =>
         lobby is not null
         && lobby.Phase == Phase.Setup
         && lobby.HostPlayerId == PlayerId
-        && lobby.Players.Count >= 4
+        && lobby.Players.Count >= MinimumPlayersToStart
         && lobby.Players.All(player => player.Ready);
 
     private string StartRequirements =>
         lobby is null ? string.Empty
         : lobby.Phase != Phase.Setup ? "The lobby is already in progress."
         : lobby.HostPlayerId != PlayerId ? "Only the host can start the game."
-        : lobby.Players.Count < 4 ? "At least four players are required to start."
+        : lobby.Players.Count < MinimumPlayersToStart
+            ? "At least four players are required to start. Fill seats to add bots."
         : lobby.Players.Any(player => !player.Ready)
             ? "Everyone needs to mark ready before the game can begin."
             : "The lobby is ready to start.";
@@ -266,6 +285,12 @@
     private Task TogglePlayerReadyAsync() =>
         RunLobbyActionAsync(() => LobbyService.TogglePlayerReadyAsync(Id, PlayerId));
 
+    private Task FillSeatsAsync() =>
+        RunLobbyActionAsync(
+            () => LobbyService.FillSeatsAsync(Id, PlayerId),
+            "Bot seats added."
+        );
+
     private Task StartGameAsync() =>
         RunLobbyActionAsync(() => LobbyService.StartGameAsync(Id, PlayerId));
 
@@ -303,7 +328,7 @@
         }
     }
 
-    private async Task RunLobbyActionAsync(Func<Task> action)
+    private async Task RunLobbyActionAsync(Func<Task> action, string successMessage = "")
     {
         if (isBusy)
         {
@@ -317,6 +342,7 @@
         try
         {
             await action();
+            feedbackMessage = successMessage;
         }
         catch (InvalidOperationException ex)
         {

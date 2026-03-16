@@ -93,6 +93,10 @@
                             <div class="game-player @(player.Alive ? string.Empty : "game-player-dead")">
                                 <div>
                                     <strong>@player.Name</strong>
+                                    @if (player.IsBot)
+                                    {
+                                        <span class="game-badge">Bot</span>
+                                    }
                                     @if (player.Id == Lobby.HostPlayerId)
                                     {
                                         <span class="game-badge">Host</span>
