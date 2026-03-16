@@ -53,34 +53,28 @@
                             <span>Host controls phase</span>
                         </span>
                     }
+                    @if (!string.IsNullOrWhiteSpace(connectionMessage))
+                    {
+                        <span class="game-meta-chip">
+                            <strong>Connection</strong>
+                            <span>@connectionMessage</span>
+                        </span>
+                    }
+                    <span class="game-meta-chip game-meta-chip-omen">
+                        <strong>Latest Omen</strong>
+                        <span>@LatestOmenText</span>
+                    </span>
                 </div>
             </div>
-
-            @if (!string.IsNullOrWhiteSpace(connectionMessage))
-            {
-                <p class="game-message game-banner">@connectionMessage</p>
-            }
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 <p class="game-message game-message-error game-banner">@errorMessage</p>
             }
 
-            @if (!string.IsNullOrWhiteSpace(Lobby.LatestEvent))
-            {
-                <section class="game-card game-omen">
-                    <p class="game-section-kicker">Latest Omen</p>
-                    <p>@Lobby.LatestEvent</p>
-                </section>
-            }
-
-            <div class="game-grid">
-                <section class="game-card">
-                    <div class="game-section-header">
-                        <div>
-                            <h2><strong>Your role is @CurrentPlayer.Role.</strong></h2>
-                        </div>
-                    </div>
+            <section class="game-card game-story">
+                <div class="game-story-pane game-story-pane-role">
+                    <h2>Your role is @CurrentPlayer.Role.</h2>
                     <p>@RoleDescription</p>
                     @if (!string.IsNullOrWhiteSpace(gameView.PrivateNote))
                     {
@@ -88,11 +82,13 @@
                     }
                     @if (!string.IsNullOrWhiteSpace(ActionProgressText))
                     {
-                        <p>@ActionProgressText</p>
+                        <p class="game-story-progress">@ActionProgressText</p>
                     }
-                </section>
+                </div>
+            </section>
 
-                <section class="game-card">
+            <div class="game-grid">
+                <section class="game-card game-roster-card">
                     <div class="game-roster">
                         @foreach (var player in Lobby.Players)
                         {
@@ -122,138 +118,139 @@
                         }
                     </div>
                 </section>
-            </div>
 
-            <div class="game-grid game-grid-secondary">
-                <section class="game-card">
-                    <div class="game-section-header">
-                        <div>
-                            <p class="game-section-kicker">Decision</p>
+                <section class="game-card game-command">
+                    <div class="game-decision">
+                        <div class="game-section-header">
+                            <div>
+                                <p class="game-section-kicker">Decision</p>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(ActionProgressText))
+                            {
+                                <span class="game-section-stat">@ActionProgressText</span>
+                            }
                         </div>
-                        @if (!string.IsNullOrWhiteSpace(ActionProgressText))
+                        @if (!CurrentPlayer.Alive && Lobby.Phase != Phase.GameOver)
                         {
-                            <span class="game-section-stat">@ActionProgressText</span>
+                            <p>After your death, only your restless, lingering spirit bears witness to events.</p>
                         }
-                    </div>
-                    @if (!CurrentPlayer.Alive && Lobby.Phase != Phase.GameOver)
-                    {
-                        <p>After your death, only your restless, lingering spirit bears witness to events.</p>
-                    }
-                    else if (Lobby.Phase == Phase.GameOver)
-                    {
-                        <p>@(Lobby.Winner ?? "No one") won the game.</p>
-                    }
-                    else if (Lobby.Phase == Phase.Dawn)
-                    {
-                        <p>It seems dark forces have been at work. The living gather themselves to face what the morning
-                            brings...
-                        </p>
-                    }
-                    else if (Lobby.Phase == Phase.Night)
-                    {
-                        @if (AvailableNightAction is null)
+                        else if (Lobby.Phase == Phase.GameOver)
                         {
-                            <p>Your role does not act at night. Wait for dawn.</p>
+                            <p>@(Lobby.Winner ?? "No one") won the game.</p>
                         }
-                        else
+                        else if (Lobby.Phase == Phase.Dawn)
                         {
-                            <p>@NightActionPrompt</p>
-                            <div class="game-targets">
-                                @foreach (var target in NightTargets)
-                                {
-                                    <button class="game-button @(IsCurrentNightTarget(target.Id) ? "game-button-active" : string.Empty)"
+                            <p>It seems dark forces have been at work. The living gather themselves to face what the morning
+                                brings...
+                            </p>
+                        }
+                        else if (Lobby.Phase == Phase.Night)
+                        {
+                            @if (AvailableNightAction is null)
+                            {
+                                <p>You sleep fitfully.</p>
+                            }
+                            else
+                            {
+                                <p>@NightActionPrompt</p>
+                                <div class="game-targets">
+                                    @foreach (var target in NightTargets)
+                                    {
+                                        <button
+                                            class="game-button @(IsCurrentNightTarget(target.Id) ? "game-button-active" : string.Empty)"
                                             @onclick="() => SubmitNightActionAsync(target.Id)" disabled="@isBusy">
-                                        @GetNightActionLabel(target.Name)
+                                            @GetNightActionLabel(target.Name)
+                                        </button>
+                                    }
+                                </div>
+                                @if (gameView.SubmittedNightAction?.TargetId is Guid targetId)
+                                {
+                                    <p>You selected @GetPlayerName(targetId).</p>
+                                }
+                            }
+                        }
+                        else if (Lobby.Phase == Phase.Day)
+                        {
+                            <p>The time has come to cast the guilty out.</p>
+                            <div class="game-targets">
+                                @foreach (var target in VoteTargets)
+                                {
+                                    <button
+                                        class="game-button @(gameView.SubmittedVoteTargetId == target.Id ? "game-button-active" : string.Empty)"
+                                        @onclick="() => SubmitVoteAsync(target.Id)" disabled="@isBusy">
+                                        Vote for @target.Name
                                     </button>
                                 }
                             </div>
-                            @if (gameView.SubmittedNightAction?.TargetId is Guid targetId)
+                            @if (gameView.SubmittedVoteTargetId is Guid votedTargetId)
                             {
-                                <p>You selected @GetPlayerName(targetId).</p>
-                            }
-                        }
-                    }
-                    else if (Lobby.Phase == Phase.Day)
-                    {
-                        <p>The time has come to cast the guilty out.</p>
-                        <div class="game-targets">
-                            @foreach (var target in VoteTargets)
-                            {
-                                <button
-                                    class="game-button @(gameView.SubmittedVoteTargetId == target.Id ? "game-button-active" : string.Empty)"
-                                    @onclick="() => SubmitVoteAsync(target.Id)" disabled="@isBusy">
-                                    Vote for @target.Name
-                                </button>
-                            }
-                        </div>
-                        @if (gameView.SubmittedVoteTargetId is Guid votedTargetId)
-                        {
-                            <p>You voted for @GetPlayerName(votedTargetId).</p>
-                        }
-                    }
-                </section>
-
-                <section class="game-card game-chat">
-                    <div class="game-section-header game-chat-header">
-                        <div>
-                            <h2>Whispers</h2>
-                        </div>
-                    </div>
-
-                    <div class="game-chat-log">
-                        @if (Lobby.RecentMessages.Count == 0)
-                        {
-                            <p class="game-chat-empty">The circle is silent.</p>
-                        }
-                        else
-                        {
-                            @foreach (var message in Lobby.RecentMessages)
-                            {
-                                <article class="game-chat-message @(GetGameChatMessageClass(message))">
-                                    <div class="game-chat-meta @(message.IsSystem ? "game-chat-meta-system" : string.Empty)">
-                                        @if (!message.IsSystem)
-                                        {
-                                            <strong>@message.SenderName</strong>
-                                        }
-                                        <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
-                                    </div>
-                                    <p>@message.Body</p>
-                                </article>
+                                <p>You voted for @GetPlayerName(votedTargetId).</p>
                             }
                         }
                     </div>
 
-                    @if (!IsChatOpen)
-                    {
-                        <p class="game-chat-note">Your voice only falls on the blackness of the night.</p>
-                    }
-                    else if (!CanSpeakInChat)
-                    {
-                        <p class="game-chat-note">Your frail, ghostly voice is inaudible to the living.</p>
-                    }
+                    <section class="game-chat">
+                        <div class="game-section-header game-chat-header">
+                            <div>
+                                <p class="game-section-kicker">Whispers</p>
+                            </div>
+                        </div>
 
-                    <form class="game-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
-                        <input class="game-chat-input" @bind="chatMessage" @bind:event="oninput" maxlength="280"
-                               placeholder="Accuse, warn, or beg for mercy..." disabled="@(!CanSendChat)" />
-                        <button class="game-button" type="submit"
-                                disabled="@(!CanSendChat || string.IsNullOrWhiteSpace(chatMessage))">
-                            Send
+                        <div class="game-chat-log">
+                            @if (Lobby.RecentMessages.Count == 0)
+                            {
+                                <p class="game-chat-empty">The circle is silent.</p>
+                            }
+                            else
+                            {
+                                @foreach (var message in Lobby.RecentMessages)
+                                {
+                                    <article class="game-chat-message @(GetGameChatMessageClass(message))">
+                                        <div class="game-chat-meta @(message.IsSystem ? "game-chat-meta-system" : string.Empty)">
+                                            @if (!message.IsSystem)
+                                            {
+                                                <strong>@message.SenderName</strong>
+                                            }
+                                            <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                                        </div>
+                                        <p>@message.Body</p>
+                                    </article>
+                                }
+                            }
+                        </div>
+
+                        @if (!IsChatOpen)
+                        {
+                            <p class="game-chat-note">Your voice only falls on the blackness of the night.</p>
+                        }
+                        else if (!CanSpeakInChat)
+                        {
+                            <p class="game-chat-note">Your frail, ghostly voice is inaudible to the living.</p>
+                        }
+
+                        <form class="game-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
+                            <input class="game-chat-input" @bind="chatMessage" @bind:event="oninput" maxlength="280"
+                                   placeholder="Accuse, warn, or beg for mercy..." disabled="@(!CanSendChat)" />
+                            <button class="game-button" type="submit"
+                                    disabled="@(!CanSendChat || string.IsNullOrWhiteSpace(chatMessage))">
+                                Send
+                            </button>
+                        </form>
+                    </section>
+
+                    <div class="game-actions">
+                        @if (CanAdvancePhase)
+                        {
+                            <button class="game-button game-button-primary" @onclick="AdvancePhaseAsync" disabled="@isBusy">
+                                @AdvancePhaseLabel
+                            </button>
+                        }
+
+                        <button class="game-button" @onclick="LeaveAsync" disabled="@isBusy">
+                            Leave game
                         </button>
-                    </form>
+                    </div>
                 </section>
-            </div>
-
-            <div class="game-actions">
-                @if (CanAdvancePhase)
-                {
-                    <button class="game-button game-button-primary" @onclick="AdvancePhaseAsync" disabled="@isBusy">
-                        @AdvancePhaseLabel
-                    </button>
-                }
-
-                <button class="game-button" @onclick="LeaveAsync" disabled="@isBusy">
-                    Leave game
-                </button>
             </div>
         </section>
     }
@@ -336,6 +333,11 @@
             _ => "Waiting in the lobby",
         };
 
+    private string LatestOmenText =>
+        string.IsNullOrWhiteSpace(Lobby.LatestEvent)
+            ? "The village listens for the next sign."
+            : Lobby.LatestEvent;
+
     private string RoleDescription =>
         CurrentPlayer.Role switch
         {
@@ -360,7 +362,7 @@
     private string AdvancePhaseLabel =>
         Lobby.Phase switch
         {
-            Phase.Night => "Awake the village...",
+            Phase.Night => "Awaken the village...",
             Phase.Dawn => "The time for judgement is at hand...",
             Phase.Day => "The votes are cast...",
             _ => "Continue",

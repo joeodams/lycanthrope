@@ -86,16 +86,29 @@
 
 .game-meta {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    justify-content: end;
     gap: 0.75rem;
-    width: min(18rem, 100%);
+    width: min(46rem, 100%);
 }
 
 .game-meta-chip {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     gap: 0.2rem;
     padding: 0.85rem 1rem;
     border: 1px solid var(--line-0);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+}
+
+.game-meta-chip-omen {
+    grid-column: 1 / -1;
+}
+
+.game-meta-chip-omen span {
+    font-size: 0.94rem;
+    line-height: 1.4;
 }
 
 .game-meta-chip strong {
@@ -127,20 +140,12 @@
     background: rgba(161, 20, 20, 0.12);
 }
 
-.game-omen {
-    display: grid;
-    gap: 0.35rem;
-}
-
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-areas: "command roster";
     gap: 1rem;
     margin-top: 1rem;
-}
-
-.game-grid-secondary {
-    align-items: start;
 }
 
 .game-card {
@@ -187,9 +192,49 @@
     color: #ffd6d6;
 }
 
+.game-story {
+    margin-top: 1rem;
+}
+
+.game-story-pane {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.game-story-pane-role {
+    min-width: 0;
+}
+
+.game-story-text,
+.game-story-progress {
+    margin: 0;
+}
+
+.game-command {
+    grid-area: command;
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+}
+
+.game-roster-card {
+    grid-area: roster;
+}
+
+.game-decision {
+    display: grid;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .game-roster {
     display: grid;
     gap: 0.75rem;
+    align-content: start;
+    height: calc((4 * 5.5rem) + (3 * 0.75rem));
+    padding-right: 0.25rem;
+    overflow-y: auto;
 }
 
 .game-player {
@@ -197,6 +242,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    min-height: 5.5rem;
     padding: 0.95rem 1rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(255, 255, 255, 0.02);
@@ -260,12 +306,14 @@
 .game-chat {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    padding-top: 0.25rem;
 }
 
 .game-chat-log {
     display: grid;
     gap: 0.75rem;
-    height: 22rem;
+    height: 16rem;
     padding-right: 0.25rem;
     overflow-y: auto;
 }
@@ -367,7 +415,7 @@
 }
 
 .game-actions {
-    margin-top: 1.5rem;
+    margin-top: 0;
 }
 
 .game-link {
@@ -389,6 +437,9 @@
 @media (max-width: 960px) {
     .game-grid {
         grid-template-columns: 1fr;
+        grid-template-areas:
+            "command"
+            "roster";
     }
 }
 
