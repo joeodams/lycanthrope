@@ -165,8 +165,11 @@
                 <button class="lobby-button" @onclick="TogglePlayerReadyAsync" disabled="@(!CanToggleReady || isBusy)">
                     @(CurrentPlayer is not null && CurrentPlayer.Ready ? "Mark not ready" : "Mark ready")
                 </button>
-                <button class="lobby-button" @onclick="FillSeatsAsync" disabled="@(!CanFillSeats || isBusy)">
-                    Fill seats
+                <button class="lobby-button" @onclick="AddBotAsync" disabled="@(!CanAddBot || isBusy)">
+                    Add bot
+                </button>
+                <button class="lobby-button" @onclick="RemoveBotAsync" disabled="@(!CanRemoveBot || isBusy)">
+                    Remove bot
                 </button>
                 <button class="lobby-button lobby-button-primary" @onclick="StartGameAsync"
                         disabled="@(!CanStartGame || isBusy)">
@@ -185,6 +188,7 @@
 @code
 {
     private const int MinimumPlayersToStart = 4;
+    private const int MaximumPlayers = 8;
 
     [Parameter]
     public Guid Id { get; set; }
@@ -209,16 +213,24 @@
 
     private int PlayersReady => lobby?.Players.Count(player => player.Ready) ?? 0;
 
+    private int BotCount => lobby?.Players.Count(player => player.IsBot) ?? 0;
+
     private string LobbyCode => lobby?.Id.ToString("N")[..6].ToUpperInvariant() ?? string.Empty;
 
     private bool CanToggleReady =>
         lobby is not null && lobby.Phase == Phase.Setup && CurrentPlayer is not null;
 
-    private bool CanFillSeats =>
+    private bool CanAddBot =>
         lobby is not null
         && lobby.Phase == Phase.Setup
         && lobby.HostPlayerId == PlayerId
-        && lobby.Players.Count < MinimumPlayersToStart;
+        && lobby.Players.Count < MaximumPlayers;
+
+    private bool CanRemoveBot =>
+        lobby is not null
+        && lobby.Phase == Phase.Setup
+        && lobby.HostPlayerId == PlayerId
+        && BotCount > 0;
 
     private bool CanStartGame =>
         lobby is not null
@@ -234,7 +246,7 @@
         : lobby.Phase != Phase.Setup ? "The lobby is already in progress."
         : lobby.HostPlayerId != PlayerId ? "Only the host can start the game."
         : lobby.Players.Count < MinimumPlayersToStart
-            ? "At least four players are required to start. Fill seats to add bots."
+            ? "At least four players are required to start. Add players or bots until the circle is large enough."
         : lobby.Players.Any(player => !player.Ready)
             ? "Everyone needs to mark ready before the game can begin."
             : "The lobby is ready to start.";
@@ -347,10 +359,16 @@
     private Task TogglePlayerReadyAsync() =>
         RunLobbyActionAsync(() => LobbyService.TogglePlayerReadyAsync(Id, PlayerId));
 
-    private Task FillSeatsAsync() =>
+    private Task AddBotAsync() =>
         RunLobbyActionAsync(
-            () => LobbyService.FillSeatsAsync(Id, PlayerId),
-            "Bot seats added."
+            () => LobbyService.AddBotAsync(Id, PlayerId),
+            "Bot added."
+        );
+
+    private Task RemoveBotAsync() =>
+        RunLobbyActionAsync(
+            () => LobbyService.RemoveBotAsync(Id, PlayerId),
+            "Bot removed."
         );
 
     private Task StartGameAsync() =>

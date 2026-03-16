@@ -11,6 +11,7 @@ namespace lycanthrope.Services;
 public class GameEngineService : IGameEngineService
 {
     private const int MinimumPlayersToStart = 4;
+    private const int MaximumPlayers = 8;
     private const string BotNamePrefix = "Bot";
     private const int ChatMessageLimit = 40;
     private const int MaxChatMessageLength = 280;
@@ -29,10 +30,16 @@ public class GameEngineService : IGameEngineService
         var playerKey = PKey(player.Id);
         var existingHash = await _db.HashGetAllAsync(playerKey);
         var playerExists = existingHash.Length > 0;
+        var currentPlayerCount = playerExists ? 0 : (int)await _db.SetLengthAsync(LSet(lobbyId));
 
         if (!playerExists && meta.Phase != Phase.Setup)
         {
             throw new InvalidOperationException("This lobby is already in progress.");
+        }
+
+        if (!playerExists && currentPlayerCount >= MaximumPlayers)
+        {
+            throw new InvalidOperationException("This lobby is full.");
         }
 
         var joinedAtUtc =
@@ -81,32 +88,49 @@ public class GameEngineService : IGameEngineService
         return lobby;
     }
 
-    public async Task FillSeatsAsync(Guid lobbyId, Guid requestedByPlayerId)
+    public async Task AddBotAsync(Guid lobbyId, Guid requestedByPlayerId)
     {
         var lobby = await GetLobbyByIdAsync(lobbyId);
         EnsureHost(lobby, requestedByPlayerId);
 
         if (lobby.Phase != Phase.Setup)
         {
-            throw new InvalidOperationException("Seats can only be filled before the game starts.");
+            throw new InvalidOperationException("Bots can only be managed before the game starts.");
         }
 
-        var seatsToFill = MinimumPlayersToStart - lobby.Players.Count;
-        if (seatsToFill <= 0)
+        if (lobby.Players.Count >= MaximumPlayers)
         {
-            throw new InvalidOperationException("This lobby already has enough players to start.");
+            throw new InvalidOperationException("This lobby is already at the player limit.");
         }
 
         var existingNames = lobby
             .Players.Select(player => player.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var bot = CreateBotPlayer(existingNames);
+        await AddPlayerToLobbyAsync(lobbyId, bot);
+    }
 
-        for (var index = 0; index < seatsToFill; index++)
+    public async Task RemoveBotAsync(Guid lobbyId, Guid requestedByPlayerId)
+    {
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        EnsureHost(lobby, requestedByPlayerId);
+
+        if (lobby.Phase != Phase.Setup)
         {
-            var bot = CreateBotPlayer(existingNames);
-            existingNames.Add(bot.Name);
-            await AddPlayerToLobbyAsync(lobbyId, bot);
+            throw new InvalidOperationException("Bots can only be managed before the game starts.");
         }
+
+        var botToRemove = lobby
+            .Players.Where(player => player.IsBot)
+            .OrderByDescending(player => player.JoinedAtUtc)
+            .FirstOrDefault();
+
+        if (botToRemove is null)
+        {
+            throw new InvalidOperationException("There are no bots to remove.");
+        }
+
+        await RemovePlayerFromLobbyAsync(lobbyId, botToRemove.Id);
     }
 
     public async Task<Guid> CreateDemoGameAsync(Player player)
@@ -121,7 +145,7 @@ public class GameEngineService : IGameEngineService
         var lobbyId = Guid.NewGuid();
 
         await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
-        await FillSeatsAsync(lobbyId, demoPlayer.Id);
+        await FillLobbyToMinimumAsync(lobbyId, demoPlayer.Id);
         await StartGameAsync(lobbyId, demoPlayer.Id);
 
         return lobbyId;
@@ -782,6 +806,14 @@ public class GameEngineService : IGameEngineService
                 _db.HashSetAsync(PKey(player.Id), "PrivateNote", string.Empty)
             )
         );
+
+    private async Task FillLobbyToMinimumAsync(Guid lobbyId, Guid requestedByPlayerId)
+    {
+        while ((await _db.SetLengthAsync(LSet(lobbyId))) < MinimumPlayersToStart)
+        {
+            await AddBotAsync(lobbyId, requestedByPlayerId);
+        }
+    }
 
     private Task SetPrivateNoteAsync(Guid playerId, string note) =>
         _db.HashSetAsync(PKey(playerId), "PrivateNote", note);

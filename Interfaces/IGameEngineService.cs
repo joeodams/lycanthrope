@@ -10,13 +10,15 @@ public interface IGameEngineService
 
     Task AdvancePhaseAsync(Guid lobbyId, Guid requestedByPlayerId);
 
-    Task<Guid> CreateDemoGameAsync(Player player);
+    Task AddBotAsync(Guid lobbyId, Guid requestedByPlayerId);
 
-    Task FillSeatsAsync(Guid lobbyId, Guid requestedByPlayerId);
+    Task<Guid> CreateDemoGameAsync(Player player);
 
     Task<GameView> GetGameViewAsync(Guid lobbyId, Guid playerId);
 
     Task<Lobby> GetLobbyByIdAsync(Guid lobbyId);
+
+    Task RemoveBotAsync(Guid lobbyId, Guid requestedByPlayerId);
 
     Task RemovePlayerFromLobbyAsync(Guid lobbyId, Guid playerId);
 
