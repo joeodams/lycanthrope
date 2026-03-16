@@ -26,7 +26,7 @@
     {
         <section class="game-panel">
             <h1>Joining game</h1>
-            <p>@connectionMessage</p>
+            <p>@(connectionMessage ?? "Connecting to the game...")</p>
         </section>
     }
     else
@@ -36,7 +36,6 @@
                 <div class="game-titleblock">
                     <p class="game-overline">@PhaseLabel</p>
                     <h1>@PhaseHeading</h1>
-                    <p class="game-subtitle">@PhaseInstructions</p>
                 </div>
                 <div class="game-meta">
                     <span class="game-meta-chip">
@@ -45,7 +44,7 @@
                     </span>
                     <span class="game-meta-chip">
                         <strong>Status</strong>
-                        <span>@(CurrentPlayer.Alive ? "Alive" : "Out")</span>
+                        <span>@(CurrentPlayer.Alive ? "Alive" : "Dead")</span>
                     </span>
                     @if (IsHost)
                     {
@@ -84,8 +83,7 @@
                 <section class="game-card">
                     <div class="game-section-header">
                         <div>
-                            <p class="game-section-kicker">Role</p>
-                            <h2>Your Part In The Ritual</h2>
+                            <h2><strong>Your role is @CurrentPlayer.Role.</strong></h2>
                         </div>
                     </div>
                     <p>@RoleDescription</p>
@@ -124,7 +122,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <span>@(player.Alive ? "Alive" : "Out")</span>
+                                <span>@(player.Alive ? "Alive" : "Dead")</span>
                             </div>
                         }
                     </div>
@@ -136,7 +134,6 @@
                     <div class="game-section-header">
                         <div>
                             <p class="game-section-kicker">Decision</p>
-                            <h2>@ActionHeading</h2>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(ActionProgressText))
                         {
@@ -145,7 +142,7 @@
                     </div>
                     @if (!CurrentPlayer.Alive && Lobby.Phase != Phase.GameOver)
                     {
-                        <p>You are out of the game. You can still watch the phase updates.</p>
+                        <p>After your death, only your restless, lingering spirit bears witness to events.</p>
                     }
                     else if (Lobby.Phase == Phase.GameOver)
                     {
@@ -153,7 +150,9 @@
                     }
                     else if (Lobby.Phase == Phase.Dawn)
                     {
-                        <p>Review the night outcome. The host can open the discussion when everyone is ready.</p>
+                        <p>It seems dark forces have been at work. The living gather themselves to face what the morning
+                            brings...
+                        </p>
                     }
                     else if (Lobby.Phase == Phase.Night)
                     {
@@ -181,7 +180,7 @@
                     }
                     else if (Lobby.Phase == Phase.Day)
                     {
-                        <p>Choose who you want to cast out before night falls again.</p>
+                        <p>The time has come to cast the guilty out.</p>
                         <div class="game-targets">
                             @foreach (var target in VoteTargets)
                             {
@@ -202,10 +201,8 @@
                 <section class="game-card game-chat">
                     <div class="game-section-header game-chat-header">
                         <div>
-                            <p class="game-section-kicker">Discussion</p>
-                            <h2>Voices Around The Fire</h2>
+                            <h2>Whispers</h2>
                         </div>
-                        <span class="game-section-stat">@Lobby.RecentMessages.Count echoes</span>
                     </div>
 
                     <div class="game-chat-log">
@@ -230,11 +227,11 @@
 
                     @if (!IsChatOpen)
                     {
-                        <p class="game-chat-note">Public chat is closed during the night.</p>
+                        <p class="game-chat-note">Your voice only falls on the blackness of the night.</p>
                     }
                     else if (!CanSpeakInChat)
                     {
-                        <p class="game-chat-note">You can watch the discussion, but only living players can speak.</p>
+                        <p class="game-chat-note">Your frail, ghostly voice is inaudible to the living.</p>
                     }
 
                     <form class="game-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
@@ -277,7 +274,7 @@
 
     private GameView gameView;
     private HubConnection hub;
-    private string connectionMessage = "Connecting to the game...";
+    private string connectionMessage = string.Empty;
     private string feedbackMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string initializationError = string.Empty;
@@ -335,54 +332,24 @@
     private string PhaseHeading =>
         Lobby.Phase switch
         {
-            Phase.Night => "The village sleeps",
-            Phase.Dawn => "The village wakes",
-            Phase.Day => "The village debates",
+            Phase.Night => "Night falls",
+            Phase.Dawn => "Dawn breaks",
+            Phase.Day => "Fates will be decided",
             Phase.GameOver => "The game is over",
             _ => "Waiting in the lobby",
-        };
-
-    private string PhaseInstructions =>
-        Lobby.Phase switch
-        {
-            Phase.Night when !CurrentPlayer.Alive =>
-                "You are out. Watch the remaining players act through the night.",
-            Phase.Night when AvailableNightAction is NightAct.Kill =>
-                "Choose a victim. If the werewolves disagree, no one dies.",
-            Phase.Night when AvailableNightAction is NightAct.Inspect =>
-                "Inspect one living player to learn their role at dawn.",
-            Phase.Night when AvailableNightAction is NightAct.Protect =>
-                "Choose one living player to protect from the werewolves.",
-            Phase.Night => "Stay alert. You have no night action.",
-            Phase.Dawn => "Review the result of the night before the host opens the day.",
-            Phase.Day when !CurrentPlayer.Alive =>
-                "You are out. Watch the living players decide who to cast out.",
-            Phase.Day => "Discuss the evidence, then submit your vote.",
-            Phase.GameOver => $"{Lobby.Winner ?? "Nobody"} won the game.",
-            _ => "Return to the lobby to gather players.",
         };
 
     private string RoleDescription =>
         CurrentPlayer.Role switch
         {
             Role.Werewolf =>
-                "Blend in by day and strike at night. If the werewolves equal or outnumber the village, you win.",
+                "Avoid the gaze of suspicion. Strike at night as one.",
             Role.Seer =>
-                "You can inspect one living player each night to learn their true role.",
+                "The gift of sight allows you a glimpse of the truth behind the veil.",
             Role.Doctor =>
-                "You can protect one living player each night from the werewolves' attack.",
+                "Life can sometimes be spared with skill, but whose?",
             _ =>
-                "You have no night power. Survive, read the room, and vote carefully during the day.",
-        };
-
-    private string ActionHeading =>
-        Lobby.Phase switch
-        {
-            Phase.Night => "Night Action",
-            Phase.Dawn => "Dawn",
-            Phase.Day => "Day Vote",
-            Phase.GameOver => "Final Result",
-            _ => "Lobby",
+                "The weak suffer what they must.",
         };
 
     private string ActionProgressText =>
@@ -396,18 +363,18 @@
     private string AdvancePhaseLabel =>
         Lobby.Phase switch
         {
-            Phase.Night => "Resolve night",
-            Phase.Dawn => "Open day",
-            Phase.Day => "Resolve vote",
+            Phase.Night => "Awake the village...",
+            Phase.Dawn => "The time for judgement is at hand...",
+            Phase.Day => "The votes are cast...",
             _ => "Continue",
         };
 
     private string NightActionPrompt =>
         AvailableNightAction switch
         {
-            NightAct.Kill => "Choose a living non-werewolf target before dawn.",
-            NightAct.Inspect => "Choose one living player to inspect.",
-            NightAct.Protect => "Choose one living player to protect.",
+            NightAct.Kill => "The smell of blood allures you, but the pack must act as one.",
+            NightAct.Inspect => "Learn what you will of the treachery of one.",
+            NightAct.Protect => "Perhaps a soul can be saved tonight, but who of these are worthy?",
             _ => string.Empty,
         };
 
@@ -459,6 +426,7 @@
 
         try
         {
+            connectionMessage = "Connecting to the game...";
             await hub.StartAsync();
             await ReloadGameAsync();
             connectionMessage = "Connected.";
@@ -579,7 +547,7 @@
         }
         catch
         {
-            // Best-effort only. If this fails, the next page will surface the disconnect state.
+            // oops
         }
     }
 

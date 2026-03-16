@@ -97,8 +97,8 @@ public class GameEngineService : IGameEngineService
             throw new InvalidOperationException("This lobby already has enough players to start.");
         }
 
-        var existingNames = lobby.Players
-            .Select(player => player.Name)
+        var existingNames = lobby
+            .Players.Select(player => player.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var index = 0; index < seatsToFill; index++)
@@ -117,10 +117,7 @@ public class GameEngineService : IGameEngineService
             throw new InvalidOperationException("Enter a player name before starting a demo game.");
         }
 
-        var demoPlayer = new Player(player.Id, trimmedName)
-        {
-            Ready = true,
-        };
+        var demoPlayer = new Player(player.Id, trimmedName) { Ready = true };
         var lobbyId = Guid.NewGuid();
 
         await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
@@ -212,7 +209,7 @@ public class GameEngineService : IGameEngineService
             lobby,
             Phase.Night,
             1,
-            "Night 1 begins. Special roles, choose a target.",
+            "The first night begins. Fate will go as it will.",
             populateBotNightActions: true,
             populateBotVotes: false
         );
@@ -368,7 +365,7 @@ public class GameEngineService : IGameEngineService
                     );
                     await AppendSystemMessageAsync(
                         lobbyId,
-                        $"Night {dayMeta.Day + 1} begins. Special roles, choose a target."
+                        $"Night {dayMeta.Day + 1} begins. Fate will go as it will."
                     );
                     await PopulateBotNightActionsAsync(lobbyId);
                 }
@@ -669,12 +666,13 @@ public class GameEngineService : IGameEngineService
                 continue;
             }
 
-            var eligibleTargets = lobby.Players
-                .Where(player => player.Alive && player.Id != bot.Id)
+            var eligibleTargets = lobby
+                .Players.Where(player => player.Alive && player.Id != bot.Id)
                 .ToList();
-            var targetId = commonTarget == bot.Id
-                ? PickRandomTarget(eligibleTargets)
-                : commonTarget ?? PickRandomTarget(eligibleTargets);
+            var targetId =
+                commonTarget == bot.Id
+                    ? PickRandomTarget(eligibleTargets)
+                    : commonTarget ?? PickRandomTarget(eligibleTargets);
 
             if (targetId is null)
             {
@@ -836,7 +834,13 @@ public class GameEngineService : IGameEngineService
             throw new InvalidOperationException("Public chat is closed during the night.");
         }
 
-        if (lobby.Phase is not Phase.Setup and not Phase.Dawn and not Phase.Day and not Phase.GameOver)
+        if (
+            lobby.Phase
+            is not Phase.Setup
+                and not Phase.Dawn
+                and not Phase.Day
+                and not Phase.GameOver
+        )
         {
             throw new InvalidOperationException("Chat is unavailable right now.");
         }
@@ -992,9 +996,7 @@ public class GameEngineService : IGameEngineService
             throw new InvalidOperationException("Enter a message before sending.");
         }
 
-        return trimmed.Length <= MaxChatMessageLength
-            ? trimmed
-            : trimmed[..MaxChatMessageLength];
+        return trimmed.Length <= MaxChatMessageLength ? trimmed : trimmed[..MaxChatMessageLength];
     }
 
     private record Meta(
