@@ -125,7 +125,19 @@ public class GameEngineService : IGameEngineService
 
         await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
         await FillSeatsAsync(lobbyId, demoPlayer.Id);
-        await StartGameAsync(lobbyId, demoPlayer.Id);
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        EnsureHost(lobby, demoPlayer.Id);
+        EnsureLobbyCanStart(lobby);
+
+        await BeginGameAsync(
+            lobby,
+            Phase.Day,
+            1,
+            "Demo mode skips the opening night. Day 1 begins. Discuss and vote.",
+            populateBotNightActions: false,
+            populateBotVotes: true
+        );
+        await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
 
         return lobbyId;
     }
@@ -206,38 +218,16 @@ public class GameEngineService : IGameEngineService
     {
         var lobby = await GetLobbyByIdAsync(lobbyId);
         EnsureHost(lobby, requestedByPlayerId);
+        EnsureLobbyCanStart(lobby);
 
-        if (lobby.Phase != Phase.Setup)
-        {
-            throw new InvalidOperationException("This lobby has already started.");
-        }
-
-        if (lobby.Players.Count < MinimumPlayersToStart)
-        {
-            throw new InvalidOperationException("At least four players are required to start.");
-        }
-
-        if (lobby.Players.Any(player => !player.Ready))
-        {
-            throw new InvalidOperationException(
-                "All players must be ready before the game starts."
-            );
-        }
-
-        await ClearRoundStateAsync(lobbyId);
-        await AssignRolesAsync(lobby);
-        await ClearPrivateNotesAsync(lobby);
-
-        await SaveLobbyMeta(
-            lobbyId,
+        await BeginGameAsync(
+            lobby,
             Phase.Night,
             1,
-            null,
-            lobby.HostPlayerId,
-            "Night 1 begins. Special roles, choose a target."
+            "Night 1 begins. Special roles, choose a target.",
+            populateBotNightActions: true,
+            populateBotVotes: false
         );
-        await AppendSystemMessageAsync(lobbyId, "Night 1 begins. Special roles, choose a target.");
-        await PopulateBotNightActionsAsync(lobbyId);
         await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
     }
 
@@ -754,6 +744,40 @@ public class GameEngineService : IGameEngineService
     private async Task ClearRoundStateAsync(Guid lobbyId) =>
         await _db.KeyDeleteAsync([Acts(lobbyId), Votes(lobbyId)]);
 
+    private async Task BeginGameAsync(
+        Lobby lobby,
+        Phase openingPhase,
+        int openingDay,
+        string latestEvent,
+        bool populateBotNightActions,
+        bool populateBotVotes
+    )
+    {
+        await ClearRoundStateAsync(lobby.Id);
+        await AssignRolesAsync(lobby);
+        await ClearPrivateNotesAsync(lobby);
+
+        await SaveLobbyMeta(
+            lobby.Id,
+            openingPhase,
+            openingDay,
+            null,
+            lobby.HostPlayerId,
+            latestEvent
+        );
+        await AppendSystemMessageAsync(lobby.Id, latestEvent);
+
+        if (populateBotNightActions)
+        {
+            await PopulateBotNightActionsAsync(lobby.Id);
+        }
+
+        if (populateBotVotes)
+        {
+            await PopulateBotVotesAsync(lobby.Id);
+        }
+    }
+
     private async Task ClearPrivateNotesAsync(Lobby lobby) =>
         await Task.WhenAll(
             lobby.Players.Select(player =>
@@ -830,6 +854,26 @@ public class GameEngineService : IGameEngineService
         if (lobby.HostPlayerId != requestedByPlayerId)
         {
             throw new InvalidOperationException("Only the host can do that.");
+        }
+    }
+
+    private static void EnsureLobbyCanStart(Lobby lobby)
+    {
+        if (lobby.Phase != Phase.Setup)
+        {
+            throw new InvalidOperationException("This lobby has already started.");
+        }
+
+        if (lobby.Players.Count < MinimumPlayersToStart)
+        {
+            throw new InvalidOperationException("At least four players are required to start.");
+        }
+
+        if (lobby.Players.Any(player => !player.Ready))
+        {
+            throw new InvalidOperationException(
+                "All players must be ready before the game starts."
+            );
         }
     }
 
