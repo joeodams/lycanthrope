@@ -22,6 +22,8 @@ public interface IGameEngineService
 
     Task StartGameAsync(Guid lobbyId, Guid requestedByPlayerId);
 
+    Task SendChatMessageAsync(Guid lobbyId, Guid playerId, string message);
+
     Task SubmitNightActionAsync(Guid lobbyId, NightAction action);
 
     Task SubmitVoteAsync(Guid lobbyId, Guid voter, Guid target);

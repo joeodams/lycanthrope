@@ -116,6 +116,77 @@
     gap: 0.75rem;
 }
 
+.game-chat-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+    margin-bottom: 1rem;
+}
+
+.game-chat-header h2 {
+    margin-bottom: 0;
+}
+
+.game-chat-log {
+    display: grid;
+    gap: 0.75rem;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.game-chat-empty,
+.game-chat-note {
+    margin: 0 0 1rem;
+    color: rgba(247, 241, 234, 0.68);
+}
+
+.game-chat-message {
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.game-chat-message-self {
+    border-color: rgba(190, 39, 39, 0.35);
+}
+
+.game-chat-message-system {
+    border-color: rgba(190, 39, 39, 0.18);
+    background: rgba(190, 39, 39, 0.08);
+}
+
+.game-chat-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.35rem;
+    color: rgba(247, 241, 234, 0.72);
+}
+
+.game-chat-message p {
+    margin: 0;
+}
+
+.game-chat-compose {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.game-chat-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(7, 7, 9, 0.9);
+    color: inherit;
+}
+
+.game-chat-input::placeholder {
+    color: rgba(247, 241, 234, 0.45);
+}
+
 .game-button {
     padding: 0.75rem 1rem;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -151,12 +222,18 @@
     }
 
     .game-header,
-    .game-player {
+    .game-player,
+    .game-chat-header,
+    .game-chat-compose {
         flex-direction: column;
         align-items: flex-start;
     }
 
     .game-meta {
         text-align: left;
+    }
+
+    .game-chat-input {
+        width: 100%;
     }
 }

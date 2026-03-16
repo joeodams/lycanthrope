@@ -174,6 +174,58 @@
                 }
             </section>
 
+            <section class="game-card game-chat">
+                <div class="game-chat-header">
+                    <h2>Discussion</h2>
+                    <span>@Lobby.RecentMessages.Count messages</span>
+                </div>
+
+                <div class="game-chat-log">
+                    @if (Lobby.RecentMessages.Count == 0)
+                    {
+                        <p class="game-chat-empty">No messages yet.</p>
+                    }
+                    else
+                    {
+                        @foreach (var message in Lobby.RecentMessages)
+                        {
+                            <article class="game-chat-message @(GetGameChatMessageClass(message))">
+                                <div class="game-chat-meta">
+                                    <strong>@GetChatAuthor(message)</strong>
+                                    <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                                </div>
+                                <p>@message.Body</p>
+                            </article>
+                        }
+                    }
+                </div>
+
+                @if (!IsChatOpen)
+                {
+                    <p class="game-chat-note">Public chat is closed during the night.</p>
+                }
+                else if (!CanSpeakInChat)
+                {
+                    <p class="game-chat-note">You can watch the discussion, but only living players can speak.</p>
+                }
+
+                <form class="game-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
+                    <input
+                        class="game-chat-input"
+                        @bind="chatMessage"
+                        @bind:event="oninput"
+                        maxlength="280"
+                        placeholder="Share your suspicions..."
+                        disabled="@(!CanSendChat)" />
+                    <button
+                        class="game-button"
+                        type="submit"
+                        disabled="@(!CanSendChat || string.IsNullOrWhiteSpace(chatMessage))">
+                        Send
+                    </button>
+                </form>
+            </section>
+
             <div class="game-actions">
                 @if (CanAdvancePhase)
                 {
@@ -210,6 +262,7 @@
     private string feedbackMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string initializationError = string.Empty;
+    private string chatMessage = string.Empty;
     private bool isBusy;
     private bool isLeaving;
 
@@ -220,6 +273,12 @@
     private bool IsHost => Lobby.HostPlayerId == PlayerId;
 
     private bool CanAdvancePhase => IsHost && Lobby.Phase is Phase.Night or Phase.Dawn or Phase.Day;
+
+    private bool IsChatOpen => Lobby.Phase is Phase.Setup or Phase.Dawn or Phase.Day or Phase.GameOver;
+
+    private bool CanSpeakInChat => CurrentPlayer.Alive || Lobby.Phase == Phase.GameOver;
+
+    private bool CanSendChat => gameView is not null && IsChatOpen && CanSpeakInChat && !isBusy;
 
     private NightAct? AvailableNightAction =>
         CurrentPlayer.Role switch
@@ -453,6 +512,24 @@
             "Phase advanced."
         );
 
+    private async Task SendChatMessageAsync()
+    {
+        var messageToSend = chatMessage;
+        if (string.IsNullOrWhiteSpace(messageToSend))
+        {
+            return;
+        }
+
+        await RunGameActionAsync(
+            () => GameEngineService.SendChatMessageAsync(Id, PlayerId, messageToSend)
+        );
+
+        if (string.IsNullOrWhiteSpace(errorMessage))
+        {
+            chatMessage = string.Empty;
+        }
+    }
+
     private async Task LeaveAsync()
     {
         if (hub is null)
@@ -533,6 +610,18 @@
 
     private string GetPlayerName(Guid playerId) =>
         Lobby.Players.FirstOrDefault(player => player.Id == playerId)?.Name ?? "that player";
+
+    private string GetChatAuthor(ChatMessage message) => message.IsSystem ? "System" : message.SenderName;
+
+    private string GetGameChatMessageClass(ChatMessage message)
+    {
+        if (message.IsSystem)
+        {
+            return "game-chat-message-system";
+        }
+
+        return message.SenderPlayerId == PlayerId ? "game-chat-message-self" : string.Empty;
+    }
 
     public async ValueTask DisposeAsync()
     {

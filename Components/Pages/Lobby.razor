@@ -93,26 +93,54 @@
                 }
             </div>
 
+            <section class="lobby-chat">
+                <div class="lobby-chat-header">
+                    <h2>Lobby chat</h2>
+                    <span>@lobby.RecentMessages.Count messages</span>
+                </div>
+
+                <div class="lobby-chat-log">
+                    @if (lobby.RecentMessages.Count == 0)
+                    {
+                        <p class="lobby-chat-empty">Nothing but the howling wind...</p>
+                    }
+                    else
+                    {
+                        @foreach (var message in lobby.RecentMessages)
+                        {
+                            <article class="lobby-chat-message @(GetLobbyChatMessageClass(message))">
+                                <div class="lobby-chat-meta">
+                                    <strong>@GetChatAuthor(message)</strong>
+                                    <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                                </div>
+                                <p>@message.Body</p>
+                            </article>
+                        }
+                    }
+                </div>
+
+                <form class="lobby-chat-compose" @onsubmit="SendChatMessageAsync" @onsubmit:preventDefault>
+                    <input class="lobby-chat-input" @bind="chatMessage" @bind:event="oninput" maxlength="280"
+                           placeholder="Say something to the lobby..." disabled="@(!CanSendChat)" />
+                    <button class="lobby-button" type="submit"
+                            disabled="@(!CanSendChat || string.IsNullOrWhiteSpace(chatMessage))">
+                        Send
+                    </button>
+                </form>
+            </section>
+
             <div class="lobby-actions">
                 <button class="lobby-button" @onclick="CopyShareLinkAsync" disabled="@isBusy">
                     Share lobby link
                 </button>
-                <button
-                    class="lobby-button"
-                    @onclick="TogglePlayerReadyAsync"
-                    disabled="@(!CanToggleReady || isBusy)">
+                <button class="lobby-button" @onclick="TogglePlayerReadyAsync" disabled="@(!CanToggleReady || isBusy)">
                     @(CurrentPlayer is not null && CurrentPlayer.Ready ? "Mark not ready" : "Mark ready")
                 </button>
-                <button
-                    class="lobby-button"
-                    @onclick="FillSeatsAsync"
-                    disabled="@(!CanFillSeats || isBusy)">
+                <button class="lobby-button" @onclick="FillSeatsAsync" disabled="@(!CanFillSeats || isBusy)">
                     Fill seats
                 </button>
-                <button
-                    class="lobby-button lobby-button-primary"
-                    @onclick="StartGameAsync"
-                    disabled="@(!CanStartGame || isBusy)">
+                <button class="lobby-button lobby-button-primary" @onclick="StartGameAsync"
+                        disabled="@(!CanStartGame || isBusy)">
                     Start game
                 </button>
                 <button class="lobby-button" @onclick="LeaveAsync" disabled="@isBusy">
@@ -144,6 +172,7 @@
     private string feedbackMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string initializationError = string.Empty;
+    private string chatMessage = string.Empty;
     private bool isBusy;
     private bool isLeaving;
 
@@ -166,6 +195,8 @@
         && lobby.HostPlayerId == PlayerId
         && lobby.Players.Count >= MinimumPlayersToStart
         && lobby.Players.All(player => player.Ready);
+
+    private bool CanSendChat => lobby is not null && lobby.Phase == Phase.Setup && !isBusy;
 
     private string StartRequirements =>
         lobby is null ? string.Empty
@@ -294,6 +325,21 @@
     private Task StartGameAsync() =>
         RunLobbyActionAsync(() => LobbyService.StartGameAsync(Id, PlayerId));
 
+    private async Task SendChatMessageAsync()
+    {
+        var messageToSend = chatMessage;
+        if (string.IsNullOrWhiteSpace(messageToSend))
+        {
+            return;
+        }
+
+        await RunLobbyActionAsync(() => LobbyService.SendChatMessageAsync(Id, PlayerId, messageToSend));
+        if (string.IsNullOrWhiteSpace(errorMessage))
+        {
+            chatMessage = string.Empty;
+        }
+    }
+
     private async Task LeaveAsync()
     {
         if (hub is null)
@@ -356,6 +402,18 @@
         {
             isBusy = false;
         }
+    }
+
+    private string GetChatAuthor(ChatMessage message) => message.IsSystem ? "System" : message.SenderName;
+
+    private string GetLobbyChatMessageClass(ChatMessage message)
+    {
+        if (message.IsSystem)
+        {
+            return "lobby-chat-message-system";
+        }
+
+        return message.SenderPlayerId == PlayerId ? "lobby-chat-message-self" : string.Empty;
     }
 
     public async ValueTask DisposeAsync()

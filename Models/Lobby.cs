@@ -17,5 +17,7 @@ namespace lycanthrope.Models
         public Guid? HostPlayerId { get; set; }
 
         public string LatestEvent { get; set; } = string.Empty;
+
+        public List<ChatMessage> RecentMessages { get; set; } = [];
     }
 }

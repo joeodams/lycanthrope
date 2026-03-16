@@ -12,6 +12,8 @@ public class GameEngineService : IGameEngineService
 {
     private const int MinimumPlayersToStart = 4;
     private const string BotNamePrefix = "Bot";
+    private const int ChatMessageLimit = 40;
+    private const int MaxChatMessageLength = 280;
     private readonly IDatabase _db;
     private readonly ILobbyNotificationService _notifications;
 
@@ -68,6 +70,11 @@ public class GameEngineService : IGameEngineService
             hostPlayerId,
             meta.LatestEvent
         );
+
+        if (!playerExists)
+        {
+            await AppendSystemMessageAsync(lobbyId, $"{player.Name} joined the lobby.");
+        }
 
         var lobby = await GetLobbyByIdAsync(lobbyId);
         await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
@@ -154,6 +161,13 @@ public class GameEngineService : IGameEngineService
             meta.LatestEvent
         );
 
+        await AppendSystemMessageAsync(
+            lobbyId,
+            meta.Phase == Phase.Setup
+                ? $"{playerName} left the lobby."
+                : $"{playerName} left the game."
+        );
+
         if (meta.Phase is not Phase.Setup and not Phase.GameOver)
         {
             await TryDeclareWinnerAsync(
@@ -222,7 +236,28 @@ public class GameEngineService : IGameEngineService
             lobby.HostPlayerId,
             "Night 1 begins. Special roles, choose a target."
         );
+        await AppendSystemMessageAsync(lobbyId, "Night 1 begins. Special roles, choose a target.");
         await PopulateBotNightActionsAsync(lobbyId);
+        await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
+    }
+
+    public async Task SendChatMessageAsync(Guid lobbyId, Guid playerId, string message)
+    {
+        var lobby = await GetLobbyByIdAsync(lobbyId);
+        var sender = GetRequiredPlayer(lobby, playerId);
+        EnsureChatAllowed(lobby, sender);
+
+        await AppendChatMessageAsync(
+            lobbyId,
+            new ChatMessage
+            {
+                SenderPlayerId = sender.Id,
+                SenderName = sender.Name,
+                Body = NormalizeChatMessage(message),
+                IsSystem = false,
+            }
+        );
+
         await _notifications.NotifyLobbyUpdatedAsync(lobbyId);
     }
 
@@ -333,6 +368,10 @@ public class GameEngineService : IGameEngineService
                     lobby.HostPlayerId,
                     lobby.LatestEvent
                 );
+                await AppendSystemMessageAsync(
+                    lobbyId,
+                    $"Day {lobby.DayCount} begins. Discuss and vote."
+                );
                 await PopulateBotVotesAsync(lobbyId);
                 break;
 
@@ -348,6 +387,10 @@ public class GameEngineService : IGameEngineService
                         null,
                         dayMeta.HostPlayerId,
                         voteSummary
+                    );
+                    await AppendSystemMessageAsync(
+                        lobbyId,
+                        $"Night {dayMeta.Day + 1} begins. Special roles, choose a target."
                     );
                     await PopulateBotNightActionsAsync(lobbyId);
                 }
@@ -386,6 +429,7 @@ public class GameEngineService : IGameEngineService
     {
         var players = await LoadPlayersAsync(lobbyId);
         var meta = await LoadLobbyMeta(lobbyId);
+        var recentMessages = await LoadRecentMessagesAsync(lobbyId);
 
         return new Lobby(lobbyId)
         {
@@ -395,6 +439,7 @@ public class GameEngineService : IGameEngineService
             Winner = meta.Winner,
             HostPlayerId = meta.HostPlayerId,
             LatestEvent = meta.LatestEvent,
+            RecentMessages = recentMessages,
         };
     }
 
@@ -451,6 +496,7 @@ public class GameEngineService : IGameEngineService
             summary = $"Dawn breaks. {target.Name} was killed in the night.";
         }
 
+        await AppendSystemMessageAsync(lobby.Id, summary);
         await TryDeclareWinnerAsync(lobby.Id, summary, lobby.HostPlayerId, lobby.DayCount);
         return summary;
     }
@@ -483,6 +529,7 @@ public class GameEngineService : IGameEngineService
             summary = $"The village cast out {target.Name}.";
         }
 
+        await AppendSystemMessageAsync(lobby.Id, summary);
         await TryDeclareWinnerAsync(lobby.Id, summary, lobby.HostPlayerId, lobby.DayCount);
         return summary;
     }
@@ -516,6 +563,7 @@ public class GameEngineService : IGameEngineService
             hostPlayerId,
             $"{summary} {winner} win."
         );
+        await AppendSystemMessageAsync(lobbyId, $"{winner} win.");
         return true;
     }
 
@@ -693,6 +741,16 @@ public class GameEngineService : IGameEngineService
             .ToHashSet();
     }
 
+    private async Task<List<ChatMessage>> LoadRecentMessagesAsync(Guid lobbyId)
+    {
+        var entries = await _db.ListRangeAsync(Chat(lobbyId));
+        return entries
+            .Where(entry => entry.HasValue)
+            .Select(Deserialize<ChatMessage>)
+            .OrderBy(message => message.CreatedAtUtc)
+            .ToList();
+    }
+
     private async Task ClearRoundStateAsync(Guid lobbyId) =>
         await _db.KeyDeleteAsync([Acts(lobbyId), Votes(lobbyId)]);
 
@@ -741,6 +799,31 @@ public class GameEngineService : IGameEngineService
     private static Player GetRequiredPlayer(Lobby lobby, Guid playerId) =>
         lobby.Players.FirstOrDefault(player => player.Id == playerId)
         ?? throw new InvalidOperationException("That player is no longer in the game.");
+
+    private static void EnsureChatAllowed(Lobby lobby, Player player)
+    {
+        if (player.IsBot)
+        {
+            throw new InvalidOperationException("Bots cannot send chat messages.");
+        }
+
+        if (lobby.Phase == Phase.Night)
+        {
+            throw new InvalidOperationException("Public chat is closed during the night.");
+        }
+
+        if (lobby.Phase is not Phase.Setup and not Phase.Dawn and not Phase.Day and not Phase.GameOver)
+        {
+            throw new InvalidOperationException("Chat is unavailable right now.");
+        }
+
+        if (!player.Alive && lobby.Phase != Phase.GameOver)
+        {
+            throw new InvalidOperationException(
+                "You can watch the discussion, but only living players can speak."
+            );
+        }
+    }
 
     private static void EnsureHost(Lobby lobby, Guid requestedByPlayerId)
     {
@@ -840,6 +923,36 @@ public class GameEngineService : IGameEngineService
         return candidates[Random.Shared.Next(candidates.Count)].Id;
     }
 
+    private async Task AppendSystemMessageAsync(Guid lobbyId, string message) =>
+        await AppendChatMessageAsync(
+            lobbyId,
+            new ChatMessage
+            {
+                SenderName = "System",
+                Body = NormalizeChatMessage(message),
+                IsSystem = true,
+            }
+        );
+
+    private async Task AppendChatMessageAsync(Guid lobbyId, ChatMessage message)
+    {
+        await _db.ListRightPushAsync(Chat(lobbyId), Serialize(message));
+        await _db.ListTrimAsync(Chat(lobbyId), -ChatMessageLimit, -1);
+    }
+
+    private static string NormalizeChatMessage(string message)
+    {
+        var trimmed = message.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new InvalidOperationException("Enter a message before sending.");
+        }
+
+        return trimmed.Length <= MaxChatMessageLength
+            ? trimmed
+            : trimmed[..MaxChatMessageLength];
+    }
+
     private record Meta(
         Phase Phase,
         int Day,
@@ -889,7 +1002,7 @@ public class GameEngineService : IGameEngineService
     }
 
     private Task DeleteLobbyAsync(Guid id) =>
-        _db.KeyDeleteAsync([LSet(id), LMeta(id), Acts(id), Votes(id)]);
+        _db.KeyDeleteAsync([LSet(id), LMeta(id), Acts(id), Votes(id), Chat(id)]);
 
     private static string PKey(Guid id) => $"player:{id}";
 
@@ -900,6 +1013,8 @@ public class GameEngineService : IGameEngineService
     private static string Acts(Guid id) => $"lobby:{id}:acts";
 
     private static string Votes(Guid id) => $"lobby:{id}:votes";
+
+    private static string Chat(Guid id) => $"lobby:{id}:chat";
 
     private static Player MapPlayer(HashEntry[] hash)
     {
