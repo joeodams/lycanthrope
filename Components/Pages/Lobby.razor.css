@@ -262,7 +262,7 @@
 .lobby-chat-log {
     display: grid;
     gap: 0.75rem;
-    max-height: 24rem;
+    height: 24rem;
     padding-right: 0.25rem;
     overflow-y: auto;
 }
@@ -296,6 +296,10 @@
     margin-bottom: 0.35rem;
     color: var(--bone-0);
     font-size: 0.95rem;
+}
+
+.lobby-chat-meta-system {
+    justify-content: flex-end;
 }
 
 .lobby-chat-message p {

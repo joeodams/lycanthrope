@@ -263,7 +263,7 @@
 .game-chat-log {
     display: grid;
     gap: 0.75rem;
-    max-height: 22rem;
+    height: 22rem;
     padding-right: 0.25rem;
     overflow-y: auto;
 }
@@ -298,6 +298,10 @@
     margin-bottom: 0.35rem;
     color: var(--bone-0);
     font-size: 0.95rem;
+}
+
+.game-chat-meta-system {
+    justify-content: flex-end;
 }
 
 .game-chat-message p {

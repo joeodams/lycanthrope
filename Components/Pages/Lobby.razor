@@ -121,9 +121,7 @@
                     <div class="lobby-section-header lobby-chat-header">
                         <div>
                             <p class="lobby-section-kicker">Discussion</p>
-                            <h2>Whispers</h2>
                         </div>
-                        <span class="lobby-section-stat">@lobby.RecentMessages.Count echoes</span>
                     </div>
 
                     <div class="lobby-chat-log">
@@ -136,8 +134,11 @@
                             @foreach (var message in lobby.RecentMessages)
                             {
                                 <article class="lobby-chat-message @(GetLobbyChatMessageClass(message))">
-                                    <div class="lobby-chat-meta">
-                                        <strong>@GetChatAuthor(message)</strong>
+                                    <div class="lobby-chat-meta @(message.IsSystem ? "lobby-chat-meta-system" : string.Empty)">
+                                        @if (!message.IsSystem)
+                                        {
+                                            <strong>@message.SenderName</strong>
+                                        }
                                         <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
                                     </div>
                                     <p>@message.Body</p>
@@ -433,8 +434,6 @@
             isBusy = false;
         }
     }
-
-    private string GetChatAuthor(ChatMessage message) => message.IsSystem ? "System" : message.SenderName;
 
     private string GetLobbyChatMessageClass(ChatMessage message)
     {

@@ -215,8 +215,11 @@
                             @foreach (var message in Lobby.RecentMessages)
                             {
                                 <article class="game-chat-message @(GetGameChatMessageClass(message))">
-                                    <div class="game-chat-meta">
-                                        <strong>@GetChatAuthor(message)</strong>
+                                    <div class="game-chat-meta @(message.IsSystem ? "game-chat-meta-system" : string.Empty)">
+                                        @if (!message.IsSystem)
+                                        {
+                                            <strong>@message.SenderName</strong>
+                                        }
                                         <span>@message.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
                                     </div>
                                     <p>@message.Body</p>
@@ -597,8 +600,6 @@
 
     private string GetPlayerName(Guid playerId) =>
         Lobby.Players.FirstOrDefault(player => player.Id == playerId)?.Name ?? "that player";
-
-    private string GetChatAuthor(ChatMessage message) => message.IsSystem ? "System" : message.SenderName;
 
     private string GetGameChatMessageClass(ChatMessage message)
     {

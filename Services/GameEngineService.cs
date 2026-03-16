@@ -735,7 +735,7 @@ public class GameEngineService : IGameEngineService
         return entries
             .Where(entry => entry.HasValue)
             .Select(Deserialize<ChatMessage>)
-            .OrderBy(message => message.CreatedAtUtc)
+            .OrderByDescending(message => message.CreatedAtUtc)
             .ToList();
     }
 
