@@ -1,0 +1,540 @@
+@page "/game/{Id:guid}"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@implements IAsyncDisposable
+@using lycanthrope.Interfaces
+@using lycanthrope.Models
+@using lycanthrope.Services
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using GameLobby = lycanthrope.Models.Lobby
+
+@inject IGameEngineService GameEngineService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Game</PageTitle>
+
+<div class="game-shell">
+    @if (!string.IsNullOrWhiteSpace(initializationError))
+    {
+        <section class="game-panel">
+            <h1>Game unavailable</h1>
+            <p>@initializationError</p>
+            <a class="game-link" href="/?lobbyId=@Id">Return to the landing page</a>
+        </section>
+    }
+    else if (gameView is null)
+    {
+        <section class="game-panel">
+            <h1>Joining game</h1>
+            <p>@connectionMessage</p>
+        </section>
+    }
+    else
+    {
+        <section class="game-panel">
+            <div class="game-header">
+                <div>
+                    <p class="game-phase">@PhaseLabel</p>
+                    <h1>@PhaseHeading</h1>
+                    <p class="game-subtitle">@PhaseInstructions</p>
+                </div>
+                <div class="game-meta">
+                    <span>Role: @CurrentPlayer.Role</span>
+                    <span>@(CurrentPlayer.Alive ? "Alive" : "Out")</span>
+                    @if (IsHost)
+                    {
+                        <span>Host controls phase</span>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(connectionMessage))
+            {
+                <p class="game-message">@connectionMessage</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(feedbackMessage))
+            {
+                <p class="game-message">@feedbackMessage</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <p class="game-message game-message-error">@errorMessage</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Lobby.LatestEvent))
+            {
+                <section class="game-card">
+                    <h2>Latest Event</h2>
+                    <p>@Lobby.LatestEvent</p>
+                </section>
+            }
+
+            <div class="game-grid">
+                <section class="game-card">
+                    <h2>Your Role</h2>
+                    <p>@RoleDescription</p>
+                    @if (!string.IsNullOrWhiteSpace(gameView.PrivateNote))
+                    {
+                        <p class="game-private">@gameView.PrivateNote</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(ActionProgressText))
+                    {
+                        <p>@ActionProgressText</p>
+                    }
+                </section>
+
+                <section class="game-card">
+                    <h2>Players</h2>
+                    <div class="game-roster">
+                        @foreach (var player in Lobby.Players)
+                        {
+                            <div class="game-player @(player.Alive ? string.Empty : "game-player-dead")">
+                                <div>
+                                    <strong>@player.Name</strong>
+                                    @if (player.Id == Lobby.HostPlayerId)
+                                    {
+                                        <span class="game-badge">Host</span>
+                                    }
+                                    @if (player.Id == PlayerId)
+                                    {
+                                        <span class="game-badge">You</span>
+                                    }
+                                </div>
+                                <span>@(player.Alive ? "Alive" : "Out")</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <section class="game-card">
+                <h2>@ActionHeading</h2>
+                @if (!CurrentPlayer.Alive && Lobby.Phase != Phase.GameOver)
+                {
+                    <p>You are out of the game. You can still watch the phase updates.</p>
+                }
+                else if (Lobby.Phase == Phase.GameOver)
+                {
+                    <p>@(Lobby.Winner ?? "No one") won the game.</p>
+                }
+                else if (Lobby.Phase == Phase.Dawn)
+                {
+                    <p>Review the night outcome. The host can open the discussion when everyone is ready.</p>
+                }
+                else if (Lobby.Phase == Phase.Night)
+                {
+                    @if (AvailableNightAction is null)
+                    {
+                        <p>Your role does not act at night. Wait for dawn.</p>
+                    }
+                    else
+                    {
+                        <p>@NightActionPrompt</p>
+                        <div class="game-targets">
+                            @foreach (var target in NightTargets)
+                            {
+                                <button
+                                    class="game-button @(IsCurrentNightTarget(target.Id) ? "game-button-active" : string.Empty)"
+                                    @onclick="() => SubmitNightActionAsync(target.Id)"
+                                    disabled="@isBusy">
+                                    @GetNightActionLabel(target.Name)
+                                </button>
+                            }
+                        </div>
+                        @if (gameView.SubmittedNightAction?.TargetId is Guid targetId)
+                        {
+                            <p>You selected @GetPlayerName(targetId).</p>
+                        }
+                    }
+                }
+                else if (Lobby.Phase == Phase.Day)
+                {
+                    <p>Choose who you want to cast out before night falls again.</p>
+                    <div class="game-targets">
+                        @foreach (var target in VoteTargets)
+                        {
+                            <button
+                                class="game-button @(gameView.SubmittedVoteTargetId == target.Id ? "game-button-active" : string.Empty)"
+                                @onclick="() => SubmitVoteAsync(target.Id)"
+                                disabled="@isBusy">
+                                Vote for @target.Name
+                            </button>
+                        }
+                    </div>
+                    @if (gameView.SubmittedVoteTargetId is Guid votedTargetId)
+                    {
+                        <p>You voted for @GetPlayerName(votedTargetId).</p>
+                    }
+                }
+            </section>
+
+            <div class="game-actions">
+                @if (CanAdvancePhase)
+                {
+                    <button
+                        class="game-button game-button-primary"
+                        @onclick="AdvancePhaseAsync"
+                        disabled="@isBusy">
+                        @AdvancePhaseLabel
+                    </button>
+                }
+
+                <button class="game-button" @onclick="LeaveAsync" disabled="@isBusy">
+                    Leave game
+                </button>
+            </div>
+        </section>
+    }
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid Id { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string PlayerName { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery]
+    public Guid PlayerId { get; set; }
+
+    private GameView gameView;
+    private HubConnection hub;
+    private string connectionMessage = "Connecting to the game...";
+    private string feedbackMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private string initializationError = string.Empty;
+    private bool isBusy;
+    private bool isLeaving;
+
+    private GameLobby Lobby => gameView.Lobby;
+
+    private Player CurrentPlayer => gameView.CurrentPlayer;
+
+    private bool IsHost => Lobby.HostPlayerId == PlayerId;
+
+    private bool CanAdvancePhase => IsHost && Lobby.Phase is Phase.Night or Phase.Dawn or Phase.Day;
+
+    private NightAct? AvailableNightAction =>
+        CurrentPlayer.Role switch
+        {
+            Role.Werewolf => NightAct.Kill,
+            Role.Seer => NightAct.Inspect,
+            Role.Doctor => NightAct.Protect,
+            _ => null,
+        };
+
+    private IEnumerable<Player> NightTargets =>
+        AvailableNightAction switch
+        {
+            NightAct.Kill => Lobby.Players.Where(player =>
+                player.Alive && player.Id != PlayerId && player.Role != Role.Werewolf
+            ),
+            NightAct.Inspect => Lobby.Players.Where(player => player.Alive && player.Id != PlayerId),
+            NightAct.Protect => Lobby.Players.Where(player => player.Alive),
+            _ => Enumerable.Empty<Player>(),
+        };
+
+    private IEnumerable<Player> VoteTargets =>
+        Lobby.Players.Where(player => player.Alive && player.Id != PlayerId);
+
+    private string PhaseLabel =>
+        Lobby.Phase switch
+        {
+            Phase.Night => $"Night {Lobby.DayCount}",
+            Phase.Dawn => $"Dawn {Lobby.DayCount}",
+            Phase.Day => $"Day {Lobby.DayCount}",
+            Phase.GameOver => "Game Over",
+            _ => "Lobby",
+        };
+
+    private string PhaseHeading =>
+        Lobby.Phase switch
+        {
+            Phase.Night => "The village sleeps",
+            Phase.Dawn => "The village wakes",
+            Phase.Day => "The village debates",
+            Phase.GameOver => "The game is over",
+            _ => "Waiting in the lobby",
+        };
+
+    private string PhaseInstructions =>
+        Lobby.Phase switch
+        {
+            Phase.Night when !CurrentPlayer.Alive =>
+                "You are out. Watch the remaining players act through the night.",
+            Phase.Night when AvailableNightAction is NightAct.Kill =>
+                "Choose a victim. If the werewolves disagree, no one dies.",
+            Phase.Night when AvailableNightAction is NightAct.Inspect =>
+                "Inspect one living player to learn their role at dawn.",
+            Phase.Night when AvailableNightAction is NightAct.Protect =>
+                "Choose one living player to protect from the werewolves.",
+            Phase.Night => "Stay alert. You have no night action.",
+            Phase.Dawn => "Review the result of the night before the host opens the day.",
+            Phase.Day when !CurrentPlayer.Alive =>
+                "You are out. Watch the living players decide who to cast out.",
+            Phase.Day => "Discuss the evidence, then submit your vote.",
+            Phase.GameOver => $"{Lobby.Winner ?? "Nobody"} won the game.",
+            _ => "Return to the lobby to gather players.",
+        };
+
+    private string RoleDescription =>
+        CurrentPlayer.Role switch
+        {
+            Role.Werewolf =>
+                "Blend in by day and strike at night. If the werewolves equal or outnumber the village, you win.",
+            Role.Seer =>
+                "You can inspect one living player each night to learn their true role.",
+            Role.Doctor =>
+                "You can protect one living player each night from the werewolves' attack.",
+            _ =>
+                "You have no night power. Survive, read the room, and vote carefully during the day.",
+        };
+
+    private string ActionHeading =>
+        Lobby.Phase switch
+        {
+            Phase.Night => "Night Action",
+            Phase.Dawn => "Dawn",
+            Phase.Day => "Day Vote",
+            Phase.GameOver => "Final Result",
+            _ => "Lobby",
+        };
+
+    private string ActionProgressText =>
+        Lobby.Phase switch
+        {
+            Phase.Night => $"{gameView.SubmittedNightActions}/{gameView.RequiredNightActions} night actions submitted.",
+            Phase.Day => $"{gameView.SubmittedVotes}/{gameView.RequiredVotes} votes submitted.",
+            _ => string.Empty,
+        };
+
+    private string AdvancePhaseLabel =>
+        Lobby.Phase switch
+        {
+            Phase.Night => "Resolve night",
+            Phase.Dawn => "Open day",
+            Phase.Day => "Resolve vote",
+            _ => "Continue",
+        };
+
+    private string NightActionPrompt =>
+        AvailableNightAction switch
+        {
+            NightAct.Kill => "Choose a living villager-side target for the werewolves.",
+            NightAct.Inspect => "Choose one living player to inspect.",
+            NightAct.Protect => "Choose one living player to protect.",
+            _ => string.Empty,
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PlayerId == Guid.Empty || string.IsNullOrWhiteSpace(PlayerName))
+        {
+            NavigationManager.NavigateTo($"/?lobbyId={Id}");
+            return;
+        }
+
+        await ConnectToGameAsync();
+    }
+
+    private async Task ConnectToGameAsync()
+    {
+        hub = new HubConnectionBuilder()
+            .WithUrl(
+                NavigationManager.ToAbsoluteUri(
+                    $"/lobbyhub?lobbyId={Id}&playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}"
+                )
+            )
+            .WithAutomaticReconnect()
+            .Build();
+
+        hub.On(LobbyHub.LobbyUpdatedMethod, ReloadGameAsync);
+
+        hub.Reconnecting += _ =>
+        {
+            connectionMessage = "Connection dropped. Reconnecting...";
+            return InvokeAsync(StateHasChanged);
+        };
+
+        hub.Reconnected += async _ =>
+        {
+            connectionMessage = "Reconnected to the game.";
+            await ReloadGameAsync();
+        };
+
+        hub.Closed += _ =>
+        {
+            if (!isLeaving)
+            {
+                connectionMessage = "Disconnected from the game.";
+            }
+
+            return InvokeAsync(StateHasChanged);
+        };
+
+        try
+        {
+            await hub.StartAsync();
+            await ReloadGameAsync();
+            connectionMessage = "Connected.";
+        }
+        catch (HubException ex)
+        {
+            initializationError = ex.Message;
+        }
+        catch
+        {
+            initializationError = "Unable to connect to this game right now.";
+        }
+    }
+
+    private async Task ReloadGameAsync()
+    {
+        try
+        {
+            gameView = await GameEngineService.GetGameViewAsync(Id, PlayerId);
+        }
+        catch (InvalidOperationException)
+        {
+            if (!isLeaving)
+            {
+                NavigationManager.NavigateTo($"/?lobbyId={Id}");
+            }
+
+            return;
+        }
+
+        if (!isLeaving && Lobby.Phase == Phase.Setup)
+        {
+            await PrepareForPageTransitionAsync();
+            NavigationManager.NavigateTo(
+                $"/lobby/{Id}?playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}"
+            );
+            return;
+        }
+
+        feedbackMessage = string.Empty;
+        errorMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task SubmitNightActionAsync(Guid targetId)
+    {
+        if (AvailableNightAction is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunGameActionAsync(
+            () => GameEngineService.SubmitNightActionAsync(
+                Id,
+                new NightAction(PlayerId, AvailableNightAction.Value, targetId)
+            ),
+            $"{GetNightActionVerb()} submitted for {GetPlayerName(targetId)}."
+        );
+    }
+
+    private Task SubmitVoteAsync(Guid targetId) =>
+        RunGameActionAsync(
+            () => GameEngineService.SubmitVoteAsync(Id, PlayerId, targetId),
+            $"Vote submitted for {GetPlayerName(targetId)}."
+        );
+
+    private Task AdvancePhaseAsync() =>
+        RunGameActionAsync(
+            () => GameEngineService.AdvancePhaseAsync(Id, PlayerId),
+            "Phase advanced."
+        );
+
+    private async Task LeaveAsync()
+    {
+        if (hub is null)
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        await RunGameActionAsync(async () =>
+        {
+            isLeaving = true;
+            await hub.SendAsync(nameof(LobbyHub.LeaveLobby));
+            await hub.StopAsync();
+            NavigationManager.NavigateTo("/");
+        });
+    }
+
+    private async Task PrepareForPageTransitionAsync()
+    {
+        if (hub is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await hub.SendAsync(nameof(LobbyHub.PrepareForPageTransition));
+        }
+        catch
+        {
+            // Best-effort only. If this fails, the next page will surface the disconnect state.
+        }
+    }
+
+    private async Task RunGameActionAsync(Func<Task> action, string successMessage = "")
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            await action();
+            feedbackMessage = successMessage;
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch
+        {
+            errorMessage = "That action could not be completed.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private bool IsCurrentNightTarget(Guid playerId) =>
+        gameView.SubmittedNightAction?.TargetId == playerId;
+
+    private string GetNightActionLabel(string playerName) =>
+        $"{GetNightActionVerb()} {playerName}";
+
+    private string GetNightActionVerb() =>
+        AvailableNightAction switch
+        {
+            NightAct.Kill => "Target",
+            NightAct.Inspect => "Inspect",
+            NightAct.Protect => "Protect",
+            _ => "Select",
+        };
+
+    private string GetPlayerName(Guid playerId) =>
+        Lobby.Players.FirstOrDefault(player => player.Id == playerId)?.Name ?? "that player";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null)
+        {
+            await hub.DisposeAsync();
+        }
+    }
+}

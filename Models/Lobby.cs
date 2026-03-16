@@ -15,5 +15,7 @@ namespace lycanthrope.Models
         public string? Winner { get; set; }
 
         public Guid? HostPlayerId { get; set; }
+
+        public string LatestEvent { get; set; } = string.Empty;
     }
 }

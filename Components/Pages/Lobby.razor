@@ -1,11 +1,12 @@
 @page "/lobby/{Id:guid}"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @implements IAsyncDisposable
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
 @using lycanthrope.Services
 @using Microsoft.AspNetCore.SignalR
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Http.Connections
 
 @inject IGameEngineService LobbyService
 @inject IJSRuntime JSRuntime
@@ -59,14 +60,6 @@
                 <p class="lobby-message lobby-message-error">@errorMessage</p>
             }
 
-            @if (lobby.Phase != Phase.Setup)
-            {
-                <p class="lobby-message">
-                    The game has started. This page now reflects the current lobby state until we
-                    build the dedicated gameplay screen.
-                </p>
-            }
-
             <div class="lobby-roster">
                 @foreach (var player in lobby.Players)
                 {
@@ -104,7 +97,7 @@
                     class="lobby-button"
                     @onclick="TogglePlayerReadyAsync"
                     disabled="@(!CanToggleReady || isBusy)">
-                    @(CurrentPlayer?.Ready == true ? "Mark not ready" : "Mark ready")
+                    @(CurrentPlayer is not null && CurrentPlayer.Ready ? "Mark not ready" : "Mark ready")
                 </button>
                 <button
                     class="lobby-button lobby-button-primary"
@@ -234,7 +227,23 @@
 
         if (!isLeaving && lobby.Players.All(player => player.Id != PlayerId))
         {
+            if (hub?.State == HubConnectionState.Connected || hub?.State == HubConnectionState.Connecting)
+            {
+                connectionMessage = "Joining lobby...";
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
             NavigationManager.NavigateTo($"/?lobbyId={Id}");
+            return;
+        }
+
+        if (!isLeaving && lobby.Phase != Phase.Setup)
+        {
+            await PrepareForPageTransitionAsync();
+            NavigationManager.NavigateTo(
+                $"/game/{Id}?playerId={PlayerId}&playerName={Uri.EscapeDataString(PlayerName)}"
+            );
             return;
         }
 
@@ -275,6 +284,23 @@
             await hub.StopAsync();
             NavigationManager.NavigateTo("/");
         });
+    }
+
+    private async Task PrepareForPageTransitionAsync()
+    {
+        if (hub is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await hub.SendAsync(nameof(LobbyHub.PrepareForPageTransition));
+        }
+        catch
+        {
+            // Best-effort only. If this fails, the next page load will surface the issue.
+        }
     }
 
     private async Task RunLobbyActionAsync(Func<Task> action)

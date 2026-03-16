@@ -10,6 +10,7 @@ public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<Lobby
 {
     public const string LobbyUpdatedMethod = "LobbyUpdated";
     private const string IntentionalLeaveKey = "intentionalLeave";
+    private const string PageTransitionKey = "pageTransition";
 
     public static string GroupName(Guid lobbyId) => $"lobby:{lobbyId:N}";
 
@@ -26,15 +27,16 @@ public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<Lobby
 
         try
         {
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(lobbyId));
             await gameEngineService.AddPlayerToLobbyAsync(
                 lobbyId,
                 new Player(playerId, playerName)
             );
-            await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(lobbyId));
             await base.OnConnectedAsync();
         }
         catch (Exception ex) when (ex is InvalidOperationException or FormatException)
         {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(lobbyId));
             logger.LogWarning(
                 ex,
                 "Unable to join lobby {LobbyId} for player {PlayerId}.",
@@ -57,6 +59,12 @@ public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<Lobby
         await gameEngineService.RemovePlayerFromLobbyAsync(lobbyId, playerId);
     }
 
+    public Task PrepareForPageTransition()
+    {
+        Context.Items[PageTransitionKey] = true;
+        return Task.CompletedTask;
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var hasConnectionContext = TryGetConnectionContext(
@@ -70,7 +78,7 @@ public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<Lobby
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(lobbyId));
         }
 
-        if (!HasLeftIntentionally() && hasConnectionContext)
+        if (!HasLeftIntentionally() && !IsChangingPages() && hasConnectionContext)
         {
             await gameEngineService.RemovePlayerFromLobbyAsync(lobbyId, playerId);
         }
@@ -80,6 +88,9 @@ public sealed class LobbyHub(IGameEngineService gameEngineService, ILogger<Lobby
 
     private bool HasLeftIntentionally() =>
         Context.Items.TryGetValue(IntentionalLeaveKey, out var value) && value is true;
+
+    private bool IsChangingPages() =>
+        Context.Items.TryGetValue(PageTransitionKey, out var value) && value is true;
 
     private bool TryGetConnectionContext(out Guid lobbyId, out Guid playerId, out string playerName)
     {

@@ -1,6 +1,6 @@
 @page "/"
 
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using System.Diagnostics
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
@@ -27,16 +27,22 @@
 
     private void HandleValidSubmit()
     {
+        var encodedPlayerName = Uri.EscapeDataString(player.Name);
+
         if (!string.IsNullOrWhiteSpace(LobbyId))
         {
             //validate lobby ID
-            Navigation.NavigateTo($"/lobby/{LobbyId}?playerName={player.Name}&playerId={player.Id}");
+            Navigation.NavigateTo(
+                $"/lobby/{LobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
+            );
         }
         else
         {
             Console.WriteLine($"name created: {player.Name}");
             var newLobbyId = Guid.NewGuid();
-            Navigation.NavigateTo($"/lobby/{newLobbyId}?playerName={player.Name}&playerId={player.Id}");
+            Navigation.NavigateTo(
+                $"/lobby/{newLobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
+            );
         }
     }
 
