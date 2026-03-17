@@ -2,10 +2,8 @@
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using lycanthrope.Components.Shared
-@using lycanthrope.Interfaces
 @using lycanthrope.Models
 
-@inject IGameEngineService GameEngineService
 @inject NavigationManager Navigation
 
 <div class="fullscreen-background">
@@ -13,13 +11,10 @@
     <div class="input-container">
         <div class="input-panel">
             <EditForm Model="@player" OnValidSubmit="HandleLobbySubmitAsync" class="name-form">
-                <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" disabled="@isBusy" placeholder="who approaches?" />
+                <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" placeholder="who approaches?" />
                 <div class="landing-actions">
-                    <button class="landing-button landing-button-primary" type="submit" disabled="@isBusy">
+                    <button class="landing-button landing-button-primary" type="submit">
                         @PrimaryActionLabel
-                    </button>
-                    <button class="landing-button" type="button" @onclick="HandleDemoGameAsync" disabled="@isBusy">
-                        Play Demo
                     </button>
                 </div>
             </EditForm>
@@ -39,15 +34,9 @@
     private InputText nameInput;
     private readonly Player player = new();
     private string errorMessage = string.Empty;
-    private bool isBusy;
 
     private string PrimaryActionLabel =>
         string.IsNullOrWhiteSpace(LobbyId) ? "Create Lobby" : "Join Lobby";
-
-    private string HelperText =>
-        string.IsNullOrWhiteSpace(LobbyId)
-            ? "Press Enter to create a lobby with friends, or launch a bot-filled demo."
-            : "Press Enter to join this invite, or launch a separate bot-filled demo.";
 
     private async Task HandleLobbySubmitAsync()
     {
@@ -61,37 +50,6 @@
             : $"/lobby/{Guid.NewGuid()}?playerName={encodedPlayerName}&playerId={player.Id}";
 
         await NavigateAsync(destination);
-    }
-
-    private async Task HandleDemoGameAsync()
-    {
-        if (!TryPreparePlayer(out var encodedPlayerName))
-        {
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-
-        try
-        {
-            var demoLobbyId = await GameEngineService.CreateDemoGameAsync(player);
-            await NavigateAsync(
-                $"/game/{demoLobbyId}?playerName={encodedPlayerName}&playerId={player.Id}"
-            );
-        }
-        catch (InvalidOperationException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch
-        {
-            errorMessage = "Unable to create a demo game right now.";
-        }
-        finally
-        {
-            isBusy = false;
-        }
     }
 
     private bool TryPreparePlayer(out string encodedPlayerName)

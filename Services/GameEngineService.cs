@@ -133,24 +133,6 @@ public class GameEngineService : IGameEngineService
         await RemovePlayerFromLobbyAsync(lobbyId, botToRemove.Id);
     }
 
-    public async Task<Guid> CreateDemoGameAsync(Player player)
-    {
-        var trimmedName = player.Name.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedName))
-        {
-            throw new InvalidOperationException("Enter a player name before starting a demo game.");
-        }
-
-        var demoPlayer = new Player(player.Id, trimmedName) { Ready = true };
-        var lobbyId = Guid.NewGuid();
-
-        await AddPlayerToLobbyAsync(lobbyId, demoPlayer);
-        await FillLobbyToMinimumAsync(lobbyId, demoPlayer.Id);
-        await StartGameAsync(lobbyId, demoPlayer.Id);
-
-        return lobbyId;
-    }
-
     public async Task RemovePlayerFromLobbyAsync(Guid lobbyId, Guid playerId)
     {
         var meta = await LoadLobbyMeta(lobbyId);
@@ -806,14 +788,6 @@ public class GameEngineService : IGameEngineService
                 _db.HashSetAsync(PKey(player.Id), "PrivateNote", string.Empty)
             )
         );
-
-    private async Task FillLobbyToMinimumAsync(Guid lobbyId, Guid requestedByPlayerId)
-    {
-        while ((await _db.SetLengthAsync(LSet(lobbyId))) < MinimumPlayersToStart)
-        {
-            await AddBotAsync(lobbyId, requestedByPlayerId);
-        }
-    }
 
     private Task SetPrivateNoteAsync(Guid playerId, string note) =>
         _db.HashSetAsync(PKey(playerId), "PrivateNote", note);

@@ -12,8 +12,6 @@ public interface IGameEngineService
 
     Task AddBotAsync(Guid lobbyId, Guid requestedByPlayerId);
 
-    Task<Guid> CreateDemoGameAsync(Player player);
-
     Task<GameView> GetGameViewAsync(Guid lobbyId, Guid playerId);
 
     Task<Lobby> GetLobbyByIdAsync(Guid lobbyId);
