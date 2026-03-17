@@ -11,7 +11,7 @@
     <div class="input-container">
         <div class="input-panel">
             <EditForm Model="@player" OnValidSubmit="HandleLobbySubmitAsync" class="name-form">
-                <InputText class="name-input" @bind-Value="player.Name" @ref="nameInput" placeholder="who approaches?" />
+                <InputText class="name-input" @bind-Value="player.Name" autofocus placeholder="who approaches?" />
                 <div class="landing-actions">
                     <button class="landing-button landing-button-primary" type="submit">
                         @PrimaryActionLabel
@@ -31,7 +31,6 @@
     [SupplyParameterFromQuery]
     public string LobbyId { get; set; } = string.Empty;
 
-    private InputText nameInput;
     private readonly Player player = new();
     private string errorMessage = string.Empty;
 
@@ -71,13 +70,5 @@
     {
         Navigation.NavigateTo(destination);
         return Task.CompletedTask;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (nameInput?.Element != null)
-        {
-            await nameInput.Element.Value.FocusAsync();
-        }
     }
 }
