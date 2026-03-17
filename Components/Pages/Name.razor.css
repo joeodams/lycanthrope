@@ -1,8 +1,9 @@
 .fullscreen-background {
     position: relative;
+    isolation: isolate;
     top: 0;
     left: 0;
-    background-image: url('title.png');
+    background-image: url('title2.png');
     background-color: #040404;
     background-size: contain;
     background-position: center -6rem;
@@ -10,9 +11,11 @@
     height: 100vh;
     padding-bottom: 20vh;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .input-container {
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: flex-end;
@@ -45,12 +48,16 @@
     outline: none;
     caret-color: white;
     width: 100%;
-    border-bottom: 2px solid black;
     box-shadow: none;
     z-index: 1;
     height: 100%;
     font-family: "Creepster", system-ui;
 
+}
+
+::deep .name-input::placeholder {
+    color: rgba(246, 239, 226, 0.52);
+    opacity: 0.2;
 }
 
 ::deep .name-input.valid.modified,
