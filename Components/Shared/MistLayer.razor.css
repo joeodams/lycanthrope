@@ -25,7 +25,7 @@
     transform-origin: bottom center;
     filter: blur(1px) brightness(1.06);
     mix-blend-mode: screen;
-    animation: fog-effect calc(3s * var(--i)) ease-in infinite;
+    animation: fog-effect calc(15s * var(--i)) ease-in infinite;
 }
 
 @keyframes fog-effect {
@@ -36,7 +36,7 @@
 
     25%,
     75% {
-        opacity: 0.78;
+        opacity: 0.10;
     }
 
     100% {
@@ -55,6 +55,6 @@
 @media (prefers-reduced-motion: reduce) {
     .mist-image {
         animation: none;
-        opacity: 0.18;
+        opacity: 0.14;
     }
 }
