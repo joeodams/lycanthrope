@@ -10,8 +10,6 @@ using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
-var redisConfiguration =
-    builder.Configuration[$"{RedisOptions.SectionName}:Configuration"] ?? "localhost:6379";
 
 builder.Services
     .AddOptions<RedisOptions>()
@@ -24,10 +22,7 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-builder.Services.AddSignalR().AddStackExchangeRedis(
-    redisConfiguration,
-    options => options.Configuration.ChannelPrefix = RedisChannel.Literal("lycanthrope")
-);
+builder.Services.AddSignalR();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
     .AddCheck<RedisHealthCheck>("redis", tags: ["ready"]);
