@@ -1,6 +1,7 @@
 @page "/lobby/{Id:guid}"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @implements IAsyncDisposable
+@using lycanthrope.Components.Shared
 @using lycanthrope.Interfaces
 @using lycanthrope.Models
 @using lycanthrope.Services
@@ -15,6 +16,7 @@
 <PageTitle>Lobby</PageTitle>
 
 <div class="lobby-shell">
+    <MistLayer />
     @if (!string.IsNullOrWhiteSpace(initializationError))
     {
         <section class="lobby-panel">

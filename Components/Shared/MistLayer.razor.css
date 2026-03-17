@@ -1,0 +1,60 @@
+.mist-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.fog {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.mist-image {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+    transform-origin: bottom center;
+    filter: blur(1px) brightness(1.06);
+    mix-blend-mode: screen;
+    animation: fog-effect calc(3s * var(--i)) ease-in infinite;
+}
+
+@keyframes fog-effect {
+    0% {
+        opacity: 0;
+        transform: scale(1);
+    }
+
+    25%,
+    75% {
+        opacity: 0.78;
+    }
+
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 960px) {
+    .mist-image {
+        width: 140%;
+        left: -20%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mist-image {
+        animation: none;
+        opacity: 0.18;
+    }
+}
