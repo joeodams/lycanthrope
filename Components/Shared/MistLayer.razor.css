@@ -23,8 +23,6 @@
     pointer-events: none;
     user-select: none;
     transform-origin: bottom center;
-    filter: blur(1px) brightness(1.06);
-    mix-blend-mode: screen;
     animation: fog-effect calc(15s * var(--i)) ease-in infinite;
 }
 
@@ -36,11 +34,11 @@
 
     25%,
     75% {
-        opacity: 0.10;
+        opacity: 0.13;
     }
 
     100% {
-        transform: scale(3);
+        transform: scale(2);
         opacity: 0;
     }
 }
